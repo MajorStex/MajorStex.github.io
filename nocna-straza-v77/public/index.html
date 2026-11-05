@@ -997,7 +997,8 @@ const NETMIG=(()=>{
  return {reset,hostRoster,observe,sendBackup,receiveBackup,receiveCompressedBackup,fresh,promote,onHostLost,tick,status,makeBackup};
 })();
 
-const input={keys:new Set(),joyX:0,joyY:0,attack:false,dash:false};let width=390,height=740,dpr=1,lastTs=0,toastTimer=0,settingsOpenedFrom='menu',editorDragging=false,editorPanOrigin=null;
+const input={keys:new Set(),joyX:0,joyY:0,attack:false,dash:false};
+let width=390,height=740,dpr=1,lastTs=0,toastTimer=0,settingsOpenedFrom='menu',editorDragging=false,editorPanOrigin=null;
 function safeGet(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
 function safeSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
 
@@ -1996,7 +1997,8 @@ const NS77PERF={guestCap:1.18,hostCap:1.35,ms:0,measured:0,lastAdjust:0,guestAct
  },
  tick(){const guest=NET.role==='guest'&&NET.phase==='playing'&&G.mode==='play',host=NET.role==='host'&&NET.phase==='playing'&&G.mode==='play';
   if(guest!==this.guestActive||host!==this.hostActive){this.guestActive=guest;this.hostActive=host;this.lastAdjust=performance.now();this.measured=0;this.ms=0;resize()}
- }, status(){return{guestCap:this.guestCap,hostCap:this.hostCap,drawMs:this.lastRenderMs,changes:this.changes,active:this.guestActive||this.hostActive,guestActive:this.guestActive,hostActive:this.hostActive,dpr}}
+ },
+ status(){return{guestCap:this.guestCap,hostCap:this.hostCap,drawMs:this.lastRenderMs,changes:this.changes,active:this.guestActive||this.hostActive,guestActive:this.guestActive,hostActive:this.hostActive,dpr}}
 };window.__NS77PERF=NS77PERF;
 function resize(){width=window.innerWidth;height=window.innerHeight;dpr=window.__NSXPerf?.pixelRatio?.()??Math.min(1.75,window.devicePixelRatio||1);
  if(NS77PERF.guestActive)dpr=Math.min(dpr,NS77PERF.guestCap);
@@ -2995,7 +2997,8 @@ function drawGround(){
  drawDistantShadows(left,top);
  ctx.strokeStyle='#7c8b6799';ctx.lineWidth=18;ctx.strokeRect(vw/2-cam.x,vh/2-cam.y,WORLD.w,WORLD.h);
  const rad=ctx.createRadialGradient(vw/2,vh/2,Math.min(vw,vh)*.1,vw/2,vh/2,Math.max(vw,vh)*.9);
- rad.addColorStop(0,'#0000');rad.addColorStop(1,'#0b0d1485');ctx.fillStyle=rad;ctx.fillRect(0,0,vw,vh);}
+ rad.addColorStop(0,'#0000');rad.addColorStop(1,'#0b0d1485');ctx.fillStyle=rad;ctx.fillRect(0,0,vw,vh);
+}
 function screenPoint(x,y){let c=G.mode==='editor'?G.pan:G.camera,v=viewSize();return{x:x-c.x+v.w/2,y:y-c.y+v.h/2}}
 function worldPoint(x,y){let c=G.mode==='editor'?G.pan:G.camera,v=viewSize();return{x:x/worldScale()+c.x-v.w/2,y:y/worldScale()+c.y-v.h/2}}
 function ellipse(x,y,rx,ry,fill){ctx.beginPath();ctx.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,TAU);ctx.fillStyle=fill;ctx.fill()}
@@ -3994,7 +3997,8 @@ function setupConnection(c){
     NET.round=Number(data.round)||NET.round;resetToLobbyAfterRound(data.result||'Svi igrači su završili partiju.');return;
    }
    if(data.t==='lobby'&&NET.phase==='playing'&&Number(data.round)>=NET.round){
-    NET.round=Number(data.round)||NET.round;resetToLobbyAfterRound(data.result||'Partija je završena.');   }
+    NET.round=Number(data.round)||NET.round;resetToLobbyAfterRound(data.result||'Partija je završena.');
+   }
    if(data.t==='welcome'){
     if(data.v!==77){NET.joinRetryCount=4;netStatus('RAZLIČITE VERZIJE: oba telefona moraju koristiti kompletnu HTML v77 igru.');$('retryJoinBtn').classList.remove('hidden');return;}
     if((NET.phase!=='connecting'&&NET.phase!=='lobby')||!/^p[2-6]$/.test(data.id))return;
@@ -4993,7 +4997,8 @@ function applyCaveVisuals(){return !!(progress.cave?.active||G.caveMode);}
  function buyWithHonor(id){const item=shopItems.find(i=>i.id===id);if(!item||permanent.cosmetics.includes(id)||meta.points<item.cost)return false;meta.points-=item.cost;persistMeta();permanent.cosmetics.push(id);write(KEY,permanent);renderShop();updateUpgradeHints();return true;}
  function openShop(){$('home').classList.add('hidden');$x('ns64PaypalPreview')?.classList.add('hidden');$x('nsShopPanel').classList.remove('hidden');renderShop();window.NS69Store?.onOpen();}
  function closeModal(id){$x(id).classList.add('hidden');$('home').classList.remove('hidden');updateUpgradeHints();}
- function bind(){  $x('nsRareBuy').addEventListener('click',()=>chooseRare('buy'));$x('nsRareFight').addEventListener('click',()=>chooseRare('fight'));$x('nsRareLeave').addEventListener('click',()=>chooseRare('leave'));
+ function bind(){
+  $x('nsRareBuy').addEventListener('click',()=>chooseRare('buy'));$x('nsRareFight').addEventListener('click',()=>chooseRare('fight'));$x('nsRareLeave').addEventListener('click',()=>chooseRare('leave'));
   $x('nsDifficulty').addEventListener('change',e=>setDifficulty(e.target.value));$x('nsQuality').addEventListener('change',e=>setQuality(e.target.value));$x('nsRole').addEventListener('change',e=>setRole(e.target.value));
   $x('nsLobbyRole').addEventListener('change',e=>setRole(e.target.value));$x('nsLobbyDifficulty').addEventListener('change',e=>{if(NET.role==='host'){setDifficulty(e.target.value);broadcastLobby()}});
   $x('nsExtractionBtn').addEventListener('click',extract);$x('nsTutorialSkip').addEventListener('click',finishTutorial);$x('nsResetTutorial').addEventListener('click',resetTutorial);
