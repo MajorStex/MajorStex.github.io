@@ -264,6 +264,12 @@ function openAccount(){setVisible(true);el('ns82-login-form').hidden=!configured
  if(currentUser)el('ns82-who').textContent=currentUser.email||tr('Google account','Google nalog');
  renderLang();}
 function attach(){
+ // Email/password is the only enabled provider for this release.
+ // Google buttons remain hidden until the owner enables Google in Firebase.
+ if(CONFIG.googleSignInEnabled!==true){
+  for(const target of [el('ns82-google'),el('ns82-link-google'),document.querySelector('.ns82-separator')])
+   if(target){target.hidden=true;target.style.display='none';}
+ }
  el('ns82-login-form').addEventListener('submit',submit);
  el('ns82-signin').onclick=()=>setMode('signin');el('ns82-register').onclick=()=>setMode('signup');
  el('ns82-google').onclick=loginGoogle;el('ns82-forgot').onclick=sendReset;
