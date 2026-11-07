@@ -1,0 +1,29 @@
+name: Verify published Night Watch v88
+on:
+  push:
+    branches: [main]
+    paths:
+      - "nocna-straza-v88/**"
+      - ".github/workflows/check-night-watch-v88.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-public-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify public game and cloud assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://majorstex.github.io/nocna-straza-v88"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --location --fail --silent --show-error --max-time 20 "$url/" -o /tmp/ns88.html && grep -q 'Night Watch v88' /tmp/ns88.html && curl --location --fail --silent --show-error --max-time 20 "$url/auth-v82.js?v=88" -o /tmp/ns88-auth.js && curl --location --fail --silent --show-error --max-time 20 "$url/firebase-config.js?v=88" -o /tmp/ns88-config.js; then
+              echo "PUBLIC V88 READY: $url/"
+              exit 0
+            fi
+            echo "Not yet available (attempt $attempt)"
+            sleep 3
+          done
+          echo "ERROR: v88 was not reachable with all required assets" >&2
+          exit 1
