@@ -2611,6 +2611,15 @@ function drawBossTelegraphs(){
  }
 }
 
+// v90: lock the wind-up direction; dodging behind the troll avoids its heavy swing.
+function ns90TrollCanHit(m,victim){
+ if(!victim||victim.dead)return false;
+ const dx=victim.x-m.x,dy=victim.y-m.y,reach=m.r+victim.r+56;
+ if(dx*dx+dy*dy>reach*reach)return false;
+ const diff=Math.atan2(dy,dx)-(m.angle||0);
+ if(Math.abs(Math.atan2(Math.sin(diff),Math.cos(diff)))>1.1)return false;
+ return !obstacleInPath(m.x,m.y,victim.x,victim.y,Math.min(12,m.r*.46));
+}
 function updateMobs(dt){buildMobGrid();
   const alive=availableTargets(),loads=new Map(alive.map(p=>[p.id,0]));
   const frostActive=G.players.some(p=>p.perks.frost&&G.time<p.freezeUntil);
@@ -2622,8 +2631,7 @@ function updateMobs(dt){buildMobGrid();
       if(G.time<m.nsTrollHitAt)continue;
       m.nsTrollHitAt=0;
       const victim=alive.find(p=>p.id===m.nsTrollVictim&&!p.dead);m.nsTrollVictim=null;
-      if(victim&&Math.hypot(victim.x-m.x,victim.y-m.y)<=m.r+victim.r+56
-       &&!obstacleInPath(m.x,m.y,victim.x,victim.y,Math.min(12,m.r*.46))){
+      if(ns90TrollCanHit(m,victim)){
         damagePlayer(victim,m.damage,m);effect('shock',victim.x,victim.y);sfx('stomp');
       }
       continue;
