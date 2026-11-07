@@ -7,6 +7,31 @@ const KEYS = /^ns(?:[0-9a-z_-]*)$/i;
 const EXCLUDE = /^(?:ns61_relay_url|ns69_cloud_recovery_v1|ns82_)/;
 const MAX_KEY = 125, CHUNK_CHARS = 140000, MAX_BYTES = 4200000;
 const LOCK = 'ns82_cloud_pending';
+// v87: allow at most one automatic reload per cloud hydration session.
+// Startup code may rewrite harmless local defaults after the first reload.
+const RELOAD_GUARD = 'ns87_restored_this_tab';
+const EMPTY_GUARD = 'ns87_fresh_profile_uid';
+const RELOAD_WINDOW_MS = 120000;
+function readSessionJSON(key){try{return JSON.parse(sessionStorage.getItem(key)||'null')}catch{return null}}
+function cloudSignature(saved){
+ // Lightweight non-security fingerprint; only used to prevent duplicate reloads.
+ let hash=2166136261;
+ const feed=str=>{for(let i=0;i<str.length;i++)hash=Math.imul(hash^str.charCodeAt(i),16777619)};
+ for(const [key,val] of [...saved].sort((a,b)=>a[0]<b[0]?-1:1)){
+  feed(key);feed(String(val.length));feed(val.slice(0,64));feed(val.slice(-64));
+ }
+ return (hash>>>0).toString(36);
+}
+function recentlyReloadedFor(uid,signature){const guard=readSessionJSON(RELOAD_GUARD);
+ return guard?.uid===uid&&(guard.signature===signature||Date.now()-guard.at<RELOAD_WINDOW_MS)}
+function reloadOnceFor(uid,signature='fresh'){
+ if(recentlyReloadedFor(uid,signature))return false;
+ try{sessionStorage.setItem(RELOAD_GUARD,JSON.stringify({uid,signature,at:Date.now()}))}catch{}
+ location.reload();return true;
+}
+function setFreshUid(uid){try{sessionStorage.setItem(EMPTY_GUARD,uid)}catch{}}
+function wasFreshUid(uid){try{return sessionStorage.getItem(EMPTY_GUARD)===uid}catch{return false}}
+
 const CONFIG = window.NS82_FIREBASE_CONFIG || {};
 const configured = Boolean(CONFIG.apiKey && CONFIG.authDomain && CONFIG.projectId && CONFIG.appId);
 let sdk, db, auth, currentUser=null, cloudReady=false, guestMode=false, syncing=false;
@@ -107,6 +132,7 @@ async function bootstrapCloud(user){
  status(tr('Reading cloud saves…','Učitavam napredak iz clouda…'),'pending');
  try{
   const items=await sdk.getDocs(sdk.collection(db,'users',user.uid,'saves'));
+  if(currentUser?.uid!==user.uid)return;
   const groups=new Map();
   for(const p of items.docs){const v=p.data();if(!isSaveKey(v.key)||typeof v.value!=='string')continue;
    const part=Number.isInteger(v.part)?v.part:0,total=Number.isInteger(v.total)?v.total:1;
@@ -121,6 +147,7 @@ async function bootstrapCloud(user){
    if(Array.from({length:g.total},(_,i)=>g.parts.has(i)).some(ok=>!ok))throw Error('Incomplete cloud save for '+k);
    saved.set(k,Array.from({length:g.total},(_,i)=>g.parts.get(i)).join(''));
   }
+  const remoteSignature=cloudSignature(saved);
   const local=currentSave();
   const pending=getDirty(user.uid);
   // Local changes from a previously offline session win only for the same UID.
@@ -128,21 +155,35 @@ async function bootstrapCloud(user){
   if(items.empty){
    if(sessionUid && sessionUid!==user.uid){
     backupLocal('before_account_switch');gameReset();known=new Map();cloudReady=true;
-    sessionUid=user.uid;window.sessionStorage.setItem('ns82_verified_uid',user.uid);location.reload();return;
+    setFreshUid(user.uid);sessionUid=user.uid;window.sessionStorage.setItem('ns82_verified_uid',user.uid);
+    if(reloadOnceFor(user.uid))return;
+    // Do not import stale data from a previous account if already reloaded.
+    snapshotSaved=currentSave();setVisible(false);return;
    }
    known=new Map();cloudReady=true;
    if(local.size){
-    const confirmImport=window.confirm(tr(
+    // A new empty account should only prompt to import existing progress once.
+    const confirmImport=wasFreshUid(user.uid)?false:window.confirm(tr(
      'Found existing Night Watch progress on this device. Import it to your new cloud account? Choose Cancel for a fresh profile.',
      'Pronađen je postojeći napredak Noćne Straže na telefonu. Želiš li da ga prebaciš na novi cloud nalog? Otkaži za prazan profil.'));
     if(confirmImport){markDirty();await flush(true)}
-    else{backupLocal('before_new_profile');gameReset();known=new Map();snapshotSaved=new Map();sessionUid=user.uid;window.sessionStorage.setItem('ns82_verified_uid',user.uid);location.reload();return}
+    else if(!wasFreshUid(user.uid)){
+     backupLocal('before_new_profile');gameReset();known=new Map();snapshotSaved=new Map();
+     setFreshUid(user.uid);sessionUid=user.uid;window.sessionStorage.setItem('ns82_verified_uid',user.uid);
+     if(reloadOnceFor(user.uid))return;
+    } else {
+     markDirty();await flush(true);
+    }
    }else status(tr('Cloud account ready ✓','Cloud nalog spreman ✓'),'ok');
   }else{
    known=saved;
    const changedDevice=applyCloud(saved);
    cloudReady=true;snapshotSaved=currentSave();
-   if(changedDevice){sessionUid=user.uid;window.sessionStorage.setItem('ns82_verified_uid',user.uid);location.reload();return}
+   if(changedDevice){
+    sessionUid=user.uid;window.sessionStorage.setItem('ns82_verified_uid',user.uid);
+    if(reloadOnceFor(user.uid,remoteSignature))return;
+    // Reapply the remote save but do not create another reload loop.
+   }
    status(tr('Cloud progress loaded ✓','Cloud napredak učitan ✓'),'ok');
   }
   snapshotSaved=currentSave();sessionUid=user.uid;
@@ -156,6 +197,7 @@ async function bootstrapCloud(user){
  }finally{bootstrap=false}
 }
 async function loadSession(user){
+ if(user?.uid&&currentUser?.uid===user.uid&&(bootstrap||cloudReady))return;
  currentUser=user;
  const who=el('ns82-who');if(who)who.textContent=user?.email||tr('Google account','Google nalog');
  if(!user){cloudReady=false;known.clear();accountUid='';sessionUid='';
@@ -222,7 +264,9 @@ async function signOut(){if(!auth||!currentUser)return;
  if(!saved){const confirm=window.confirm(tr('Cloud save has not completed. Sign out anyway?','Cloud čuvanje nije završeno. Da se ipak odjaviš?'));if(!confirm)return;}
  backupLocal('before_signout_'+currentUser.uid.slice(0,9));
  gameReset();try{localStorage.removeItem(LOCK)}catch{};
- window.sessionStorage.removeItem('ns82_verified_uid');guestMode=false;cloudReady=false;known.clear();
+ window.sessionStorage.removeItem('ns82_verified_uid');
+ try{sessionStorage.removeItem(RELOAD_GUARD);sessionStorage.removeItem(EMPTY_GUARD)}catch{}
+ guestMode=false;cloudReady=false;known.clear();
  await sdk.signOut(auth);location.reload();
 }
 async function changePassword(){if(!currentUser?.email||!sdk)return;await run(async()=>{
@@ -290,7 +334,7 @@ function attach(){
  const observer=new MutationObserver(()=>renderLang());
  const languageSelector=el('gameLanguageHome');if(languageSelector)languageSelector.addEventListener('change',()=>setTimeout(renderLang,30));
  renderLang();setMode('signin');
- window.NS82_CLOUD={markDirty,flush,openAccount,downloadBackup,get online(){return !!currentUser&&cloudReady},get user(){return currentUser?.uid||null},get lastError(){return lastError}};
+ window.NS82_CLOUD={markDirty,flush,openAccount,downloadBackup,get online(){return !!currentUser&&cloudReady},get user(){return currentUser?.uid||null},get lastError(){return lastError},get bootstrapping(){return bootstrap}};
 }
 async function begin(){
  attach();
