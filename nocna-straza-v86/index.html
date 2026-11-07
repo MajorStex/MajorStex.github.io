@@ -564,6 +564,12 @@
   > .editor:not(.hidden),
   > .heroPanel:not(.hidden)
 )) > #ns84BackButton { display: block !important; }
+/* Cloud hydration UI fix: prevent the async status from moving the menu. */
+#ns82-status,#ns82-profile-status{
+ display:block;box-sizing:border-box;height:24px;min-height:24px;max-height:24px;
+ line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ margin:3px auto;padding:2px 4px;
+}
 </style><body>
 <div id="app"><canvas aria-label="Mapa igre" id="gameCanvas"></canvas><button id="ns84BackButton" class="ns84-back-button" type="button" aria-label="Back / Nazad" title="Back / Nazad">← BACK / NAZAD</button><div class="veil" id="veil"></div>
 <div class="hud hidden" id="hud"><div class="hudTop"><div class="stats"><div class="bar hpbar"><div id="hpFill"></div><span id="hpText">100 / 100 HP</span></div><div class="bar xpbar"><div id="xpFill"></div><span id="xpText">NIVO 1 · XP 0/160</span></div>
@@ -1038,7 +1044,7 @@ const NETMIG=(()=>{
 const input={keys:new Set(),joyX:0,joyY:0,attack:false,dash:false};
 let width=390,height=740,dpr=1,lastTs=0,toastTimer=0,settingsOpenedFrom='menu',editorDragging=false,editorPanOrigin=null;
 function safeGet(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
-function safeSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));window.NS82_CLOUD?.markDirty()}catch{}}
+function safeSet(k,v){try{const data=JSON.stringify(v);if(localStorage.getItem(k)!==data){localStorage.setItem(k,data);window.NS82_CLOUD?.markDirty()}}catch{}}
 
 // Persistent, local-only roguelite progression. Record only ordinary completed solo runs.
 const META_KEY='ns_stats_meta_v23';
@@ -5563,5 +5569,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   <div class="ns82-footer"><button id="ns82-guest" type="button" class="ns82-muted" data-ns82-en="PLAY LOCALLY AS GUEST" data-ns82-sr="IGRAJ LOKALNO KAO GOST">PLAY LOCALLY AS GUEST</button><button id="ns82-close" type="button" class="ns82-muted" data-ns82-en="CLOSE" data-ns82-sr="ZATVORI">CLOSE</button></div>
  </section>
 </div>
-<script src="./firebase-config.js?v=86"></script><script type="module" src="./auth-v82.js?v=86"></script>
+<script src="./firebase-config.js?v=86"></script><script type="module" src="./auth-v82.js?v=86-cloudfix87"></script>
 </body></html>
