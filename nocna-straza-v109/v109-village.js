@@ -38,6 +38,7 @@
   '#ns109Village button{font-size:clamp(10px,2.5vw,13px);padding:8px 10px;border-radius:9px;white-space:nowrap;min-height:36px}',
   '#ns109Top{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:calc(6px + env(safe-area-inset-top)) 8px 7px;background:#17292b;z-index:1}',
   '#ns109Top strong{font-size:clamp(12px,3vw,16px);color:#efc786;margin-right:auto}',
+  '#ns109Destinations{max-width:125px;min-height:36px;font-size:11px;padding:5px;background:#233c3c;color:#f5d9a1}',
   '#ns109Info{font-size:10px;color:#a9c1b2}',
   '#ns109Stage{flex:1;min-height:0;position:relative;overflow:hidden;background:#1c3932}',
   '#ns109Scene{width:100%;height:100%;display:block;touch-action:manipulation}',
@@ -56,7 +57,18 @@
  ].join('');
  document.head.append(css);document.body.append(root);
  const canvas=$('ns109Scene'),g=canvas.getContext('2d',{alpha:false}),pane=$('ns109Pane'),area=$('ns109PaneContent');
- const ctxPoint=e=>{const r=canvas.getBoundingClientRect(),sc=Math.min(r.width/960,r.height/540),left=(r.width-960*sc)/2,top=(r.height-540*sc)/2;return{x:(e.clientX-r.left-left)/sc,y:(e.clientY-r.top-top)/sc}};
+ const destinations=document.createElement('select');destinations.id='ns109Destinations';destinations.setAttribute('aria-label','Choose a village building');
+ const first=document.createElement('option');first.value='';first.textContent=tr('🏠 HOUSES','🏠 KUĆICE');destinations.append(first);
+ for(const b of buildings){const opt=document.createElement('option');opt.value=b.id;opt.textContent=tr(b.label,b.sr);destinations.append(opt)}
+ destinations.onchange=()=>{const b=buildings.find(x=>x.id===destinations.value);destinations.value='';if(b){thenEnter=b.id;walkTo=ground(b.x,b.y+Math.max(55,b.h/2+20))}};
+ $('ns109Top').insertBefore(destinations,$('ns109Classic'));
+ function view(){
+  const r=canvas.getBoundingClientRect(),portrait=r.height>r.width*1.28;
+  const scale=portrait?r.height/540:Math.min(r.width/960,r.height/540);
+  const visibleW=r.width/Math.max(.1,scale),left=portrait?clamp(my.x-visibleW/2,0,Math.max(0,960-visibleW)):0;
+  return{rect:r,scale,ox:portrait?-left*scale:(r.width-960*scale)/2,oy:(r.height-540*scale)/2};
+ }
+ const ctxPoint=e=>{const {rect,scale,ox,oy}=view();return{x:(e.clientX-rect.left-ox)/scale,y:(e.clientY-rect.top-oy)/scale}};
  const ground=(x,y)=>({x:clamp(x,29,931),y:clamp(y,62,505)});
  const isLobby=()=>NET.phase==='lobby'&&!!NET.role;
  const ownName=()=>{try{return String(getActiveAccount()?.name||'GUARDIAN').slice(0,20)}catch{return 'GUARDIAN'}};
@@ -223,6 +235,10 @@
    players.push({id:NET.localId,x:Math.round(my.x),y:Math.round(my.y)});
    const packet={t:'ns109State',players};for(const c of NET.clients.values())if(c?.open)try{c.send(packet)}catch{}
   }
+  const screen=view(),ratio=Math.min(2,window.devicePixelRatio||1),w=Math.max(1,Math.round(screen.rect.width*ratio)),h=Math.max(1,Math.round(screen.rect.height*ratio));
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
+  g.setTransform(ratio,0,0,ratio,0,0);g.fillStyle='#1d342d';g.fillRect(0,0,screen.rect.width,screen.rect.height);
+  g.setTransform(ratio*screen.scale,0,0,ratio*screen.scale,ratio*screen.ox,ratio*screen.oy);
   background();const tt=performance.now();sheep(tt);
   buildings.forEach(house);
   g.fillStyle='#467d55';g.beginPath();g.arc(790,465,37,0,7);g.fill();
