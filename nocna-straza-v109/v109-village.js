@@ -117,8 +117,11 @@
   p.textContent=tr('Only your saved recordings are shared when voice sharing is enabled. Never a live microphone. Limit: one clip per 5.4 seconds.','Šalju se samo prethodno snimljene replike ako je deljenje uključeno, nikada mikrofon uživo. Najviše jedna replika na 5,4 s.');area.append(p);
   const toggle=document.createElement('label');toggle.textContent=tr('Share recorded voice','Deli snimljeni glas')+' ';
   const input=document.createElement('input');input.type='checkbox';input.checked=CoopVoice.share;input.onchange=()=>coopVoiceUpdatePreference('share',input.checked);toggle.append(input);area.append(toggle);
-  for(const [kind,en,sr] of [['start','Ready!','Spreman!'],['victory','Well played!','Odigrano!'],['wave','Here they come!','Stižu!']]){
-   const btn=document.createElement('button');btn.textContent='🎙 '+tr(en,sr);btn.onclick=()=>{unlockSound();voiceLine(kind,true)};area.append(btn);
+  const level=currentProfileLevel();
+  for(const [kind,en,sr,minLevel] of [['start','Ready!','Spreman!',1],['victory','Well played!','Odigrano!',5],['wave','Here they come!','Stižu!',10]]){
+   const btn=document.createElement('button');btn.textContent='🎙 '+tr(en,sr)+(minLevel>1?' · LV '+minLevel:'');btn.disabled=level<minLevel;
+   btn.title=level<minLevel?tr('Unlock at permanent account level ','Otključava se na trajnom nivou ')+minLevel:'';
+   btn.onclick=()=>{if(currentProfileLevel()<minLevel)return;unlockSound();voiceLine(kind,true)};area.append(btn);
   }
  }
  function personalKey(){return 'ns109_local_rank_'+String(getActiveAccount()?.id||'default').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80)}
