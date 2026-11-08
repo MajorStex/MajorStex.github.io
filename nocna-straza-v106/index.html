@@ -7725,7 +7725,7 @@ function visit(node){if(!node)return;if(node.nodeType===3){localizeText(node);re
 let enabled=true;
 const ob=new MutationObserver(records=>{if(!enabled)return;const visited=new Set();for(const record of records){if(record.type==='characterData'){const n=record.target;if(!visited.has(n)){visited.add(n);localizeText(n);}}else if(record.type==='attributes'){localizeAttrs(record.target);}else{for(const child of record.addedNodes){if(!visited.has(child)){visited.add(child);visit(child);}}}}});
 ob.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label']});
-function syncSelectors(){document.querySelectorAll('[data-game-language]').forEach(select=>{if(select.value!==current)select.value=current;});document.documentElement.lang=current==='sr'?'sr':'en';document.title=current==='sr'?'Noćna Straža v105':'Night Watch v105';}
+function syncSelectors(){document.querySelectorAll('[data-game-language]').forEach(select=>{if(select.value!==current)select.value=current;});document.documentElement.lang=current==='sr'?'sr':'en';document.title=current==='sr'?'Noćna Straža v106':'Night Watch v106';}
 function setLanguage(lang){current=lang==='sr'?'sr':'en';try{localStorage.setItem('ns_game_language_v1',current);}catch(_){};syncSelectors();visit(document.body);}
 document.querySelectorAll('[data-game-language]').forEach(select=>{select.value=current;select.addEventListener('change',()=>{setLanguage(select.value);setTimeout(()=>window.__nightWatch?.NSX?.updateHud?.(),0);});});
 syncSelectors();visit(document.body);
