@@ -6009,7 +6009,7 @@ function renderLobby(){NSX&&NSX.opt&&document.getElementById('nsLobbyRole')&&(do
    add.disabled=!!friend||pending;add.setAttribute('aria-label',friend?'Already friends':pending?'Friend request pending':'Add '+safePlayerName(p.name)+' as friend');
    add.onclick=()=>requestLobbyFriend(friendId,p.name);row.append(add);
   }
-  if(NET.role==='host'&&p.id!==NET.localId){const kick=document.createElement('button');kick.type='button';kick.className='ns106KickBtn';kick.textContent=tr('KICK','IZBACI');kick.onclick=()=>{if(window.confirm(tr('Remove '+safePlayerName(p.name)+'?','Izbaciti '+safePlayerName(p.name)+'?')))ns106Kick(p.id)};row.append(kick)}
+  if(NET.role==='host'&&p.id!==NET.localId){const kick=document.createElement('button');kick.type='button';kick.className='ns106KickBtn';kick.textContent=lang('KICK','IZBACI');kick.onclick=()=>{if(window.confirm(lang('Remove '+safePlayerName(p.name)+'?','Izbaciti '+safePlayerName(p.name)+'?')))ns106Kick(p.id)};row.append(kick)}
   root.append(row);
  }
  const mine=NET.role==='host'?NET.localReady:NET.localReady;
@@ -6027,7 +6027,7 @@ function ns106Kick(id){if(NET.role!=='host'||!/^p[2-6]$/.test(String(id)))return
  try{c.send({t:'kicked'})}catch{}
  NET.clients.delete(id);NET.remoteInputs.delete(id);NET.readyPlayers.delete(id);NET.worldReadyPlayers.delete(id);NET.startAcks.delete(id);NET.pendingOffers.delete(id);NET.profiles.delete(id);NETLAB.tokens.delete(id);NET.spectateTargets.delete(id);
  NS99_TEAM.peerLeft(id);G.players=G.players.filter(p=>p.id!==id);
- try{c.close()}catch{}if(NET.phase==='lobby')broadcastLobby();netStatus(tr('Player removed.','Igrač je izbačen.'));return true;}
+ try{c.close()}catch{}if(NET.phase==='lobby')broadcastLobby();netStatus(lang('Player removed.','Igrač je izbačen.'));return true;}
 function broadcastLobby(){
  if(NET.role!=='host'||NET.phase!=='lobby')return;
  NS92_DIR.publish();
@@ -6268,7 +6268,7 @@ function setupConnection(c){
     }else safeSend({t:'marketResult',ok:false});
    }
   }else if(NET.role==='guest'){
-   if(data.t==='kicked'||data.t==='alreadyHere'||data.t==='sessionReplaced'){const note=data.t==='kicked'?tr('Host removed you from the room.','Domaćin te je izbacio iz sobe.'):data.t==='alreadyHere'?tr('You already host this room.','Već si domaćin ove sobe.'):tr('This account connected in another tab.','Nalog je otvoren na drugoj kartici.');
+   if(data.t==='kicked'||data.t==='alreadyHere'||data.t==='sessionReplaced'){const note=data.t==='kicked'?lang('Host removed you from the room.','Domaćin te je izbacio iz sobe.'):data.t==='alreadyHere'?lang('You already host this room.','Već si domaćin ove sobe.'):lang('This account connected in another tab.','Nalog je otvoren na drugoj kartici.');
     NET.rejoinToken='';closeNet();$('coopPanel').classList.add('hidden');$('home').classList.remove('hidden');toast(note);return}
    if(data.t==='ns99State'){if(data.round===NET.round)NS99_TEAM.receive(data.state);return}
    if(data.t==='ns93CastAck'){NS93_MAGIC.ack(data);return;}if(data.t==='migrationBackup'){NETMIG.receiveBackup(data,c);return}if(data.t==='migrationBackupZip'){void NETMIG.receiveCompressedBackup(data,c);return}if(data.t==='resumeAccepted'){NETLAB.reconnectAccepted(c,data);NS99_TEAM.render();netStatus('Ponovo povezan!');return}if(data.t==='resumeRejected'){netStatus('Povratak odbijen: token je istekao ili je runda završena.');NET.rejoinToken='';return}if(data.t==='mpReward'){awardMP(data);return;}if(data.t==='ns75FieldKit'){toast(lang(`Field kit: +${Math.round(data.heal)||0} HP · +8% attack speed for 8s`,`Zavoj: +${Math.round(data.heal)||0} HP · 8% brži napadi na 8 s`));return;}
