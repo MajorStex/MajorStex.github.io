@@ -338,6 +338,13 @@ function attach(){
 }
 async function begin(){
  attach();
+ // Special direct Temple QA link must not be blocked by the account modal.
+ // This is a local-only test session; regular gameplay still uses normal cloud login.
+ if(new URLSearchParams(location.search).get('temple-preview')==='1'){
+  guestMode=true;setVisible(false);
+  status('Temple preview • local test','pending');
+  return;
+ }
  if(!configured){
   // Never show non-functional sign-in fields before the owner connects Firebase.
   el('ns82-login-form').hidden=true;
