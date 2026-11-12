@@ -1,0 +1,12 @@
+{
+  "appId": "com.majorstex.woltkandidati",
+  "appName": "Wolt Kandidati",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
