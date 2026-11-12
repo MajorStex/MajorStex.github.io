@@ -1,0 +1,17 @@
+{
+  "name": "Wolt Kandidati — kontrolni panel",
+  "short_name": "Wolt Kandidati",
+  "description": "Kontrolni panel za praćenje kandidata",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#091525",
+  "theme_color": "#02c8a8",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
