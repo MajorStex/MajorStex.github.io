@@ -25,8 +25,9 @@ function getOverview() {
   const last = src.getLastRow();
   const width = Math.min(18, src.getLastColumn());
   if (last < 2) return { candidates:[], stats:{total:0,new:0,contacted:0,test:0}, checkedAt:new Date().toISOString() };
-  const block = src.getRange(1, 1, Math.min(last, MAX_ROWS+1), width).getDisplayValues();
-  const header = block.shift().map(s=>String(s||'').toLowerCase().trim());
+  const start = Math.max(2, last - MAX_ROWS + 1);
+  const header = src.getRange(1,1,1,width).getDisplayValues()[0].map(s=>String(s||'').toLowerCase().trim());
+  const block = src.getRange(start,1,last-start+1,width).getDisplayValues();
   const idx = (names,backup) => {
     for (const n of names) { const i=header.findIndex(h=>h===n); if (i>=0) return i; }
     return backup;
@@ -40,7 +41,8 @@ function getOverview() {
   const iStatus = idx(['lead_status'],17);
   const stateMap=new Map();
   if (states.getLastRow()>1) {
-    const sv=states.getRange(2,1,Math.min(states.getLastRow()-1,MAX_ROWS),6).getDisplayValues();
+    const statusStart=Math.max(2,states.getLastRow()-MAX_ROWS+1);
+    const sv=states.getRange(statusStart,1,states.getLastRow()-statusStart+1,6).getDisplayValues();
     sv.forEach(r=>{if(r[0])stateMap.set(r[0],{status:r[1]||'',comment:r[2]||'',channel:r[3]||'',confirmedAt:r[4]||''});});
   }
   const dedup = new Set();
