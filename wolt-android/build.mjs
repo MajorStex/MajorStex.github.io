@@ -37,7 +37,9 @@ const liveFns = String.raw`
 function openLivePanel(){
   var field=document.getElementById('liveUrl');
   var url=(field.value||S.settings.liveUrl||'').trim();
-  if(!/^https:\\/\\/script\\.google\\.com\\/macros\\/s\\/[A-Za-z0-9_-]+\\/exec(?:\\?.*)?$/.test(url)){
+  var parsed;
+  try{parsed=new URL(url)}catch(_){parsed=null}
+  if(!parsed||parsed.protocol!=='https:'||parsed.hostname!=='script.google.com'||!parsed.pathname.startsWith('/macros/s/')||!parsed.pathname.endsWith('/exec')){
     toast('Prvo poveži privatni Google panel kroz Podešavanja.');
     showTab('settings');
     return;
