@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="sr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#091525"><meta name="description" content="Wolt Kandidati — mobilni panel za evidenciju i pripremu komunikacije">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg" type="image/svg+xml"><title>Wolt Kandidati — kontrolni panel</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,sans-serif;background:#091525;color:#eff6ff}
+*{box-sizing:border-box}body{margin:0;padding:0 0 88px;background:linear-gradient(165deg,#0d2638,#091525 35%);min-height:100vh}
+header{padding:18px 17px 12px;position:sticky;top:0;background:#0a1927ed;backdrop-filter:blur(16px);z-index:4;border-bottom:1px solid #223847}
+.brand{display:flex;align-items:center;gap:10px}.mark{width:38px;height:38px;border-radius:13px;background:#00caad;color:#042c2c;display:grid;place-items:center;font-weight:900;font-size:21px}
+h1{font-size:19px;margin:0}h2{font-size:17px;margin:0 0 13px}small,.muted{color:#91aabd;font-size:12px}
+main{max-width:780px;margin:auto;padding:16px}.warning{background:#2a2515;border:1px solid #75582e;color:#f5dca6;border-radius:12px;padding:12px 13px;font-size:13px;line-height:1.45;margin-bottom:16px}
+.card{background:#102638;border:1px solid #264154;border-radius:16px;padding:16px;margin-bottom:13px;box-shadow:0 5px 20px #0002}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}.stat{padding:14px 8px;border-radius:14px;background:#122d40;border:1px solid #285064;text-align:center}.num{font-size:27px;font-weight:850}.caption{font-size:11px;color:#9bb3c2}
+button,.button{border:0;cursor:pointer;background:#02c8a8;color:#032a2a;border-radius:12px;padding:11px 15px;font:inherit;font-size:14px;font-weight:750;min-height:42px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button.secondary,.button.secondary{background:#213c4b;color:#e4f3fa}.outline{background:transparent;color:#b7d6e2;border:1px solid #3b6072}.danger{background:#68313c;color:#fff}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.stack{display:grid;gap:8px}.inline{display:flex;gap:8px;flex-wrap:wrap}
+input,textarea,select{width:100%;border-radius:10px;background:#081b2c;color:#f0f6fc;border:1px solid #375469;padding:11px;font:inherit;font-size:14px}input:focus,textarea:focus{outline:2px solid #02c8a8}textarea{min-height:145px;resize:vertical;line-height:1.5}
+label{font-size:13px;color:#bfd5df;display:grid;gap:6px}p{font-size:13px;line-height:1.6;color:#bcd0dc;margin:9px 0}.pill{font-size:11px;border-radius:20px;padding:5px 8px;background:#274355;color:#d0e3eb}.pill.new{background:#0e594e;color:#7df2d4}.pill.inbound{background:#143e77;color:#b3dcff}
+.item{display:grid;gap:7px;padding:13px 0;border-bottom:1px solid #254251}.item:last-child{border:0}
+.item strong{font-size:14px}.item small{display:block;margin-top:4px}
+nav{position:fixed;z-index:5;left:0;right:0;bottom:0;display:flex;justify-content:space-evenly;background:#102637ed;backdrop-filter:blur(18px);border-top:1px solid #315268;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;display:grid;gap:2px;justify-items:center;min-height:63px;font-size:11px;color:#99b7c5;background:transparent;border-radius:0;padding:8px 3px}nav button.active{color:#02d8b4}nav b{font-size:22px}
+.tab{display:none}.tab.active{display:block}.empty{padding:25px;text-align:center;color:#9cb5c3;font-size:13px}
+footer{text-align:center;color:#6e8b9e;font-size:11px;padding:10px}
+#toast{position:fixed;bottom:81px;left:12px;right:12px;border-radius:13px;padding:13px;background:#155044;color:#fff;z-index:10;display:none;text-align:center;font-size:13px}
+</style></head><body>
+<header><div class="brand"><div class="mark">W</div><div><h1>Wolt Kandidati</h1><small>Kontrolni panel · v0.1 · mobilna verzija</small></div></div></header>
+<main>
+<div class="warning"><strong>⚠ PREGLED — NISU POVEZANI WHATSAPP NI GOOGLE DRIVE</strong><br>Ova verzija NE šalje poruke sama i NE menja tvoju Google tabelu. Za trajnu automatizaciju potrebna je autorizacija naloga i zvanična integracija. Podaci koje uvezeš čuvaju se samo u ovom pregledaču na uređaju.</div>
+<section id="overview" class="tab active">
+<div class="stats"><div class="stat"><div id="total" class="num">0</div><div class="caption">U evidenciji</div></div><div class="stat"><div id="new" class="num">0</div><div class="caption">Novih</div></div><div class="stat"><div id="inbound" class="num">0</div><div class="caption">Javilo se</div></div></div>
+<div class="card"><h2>Status povezivanja</h2><p>Google Drive: <strong>nije autorizovan</strong><br>WhatsApp API: <strong>nije povezan</strong><br>Viber Business: <strong>nije povezan</strong></p><p>Nećemo označavati „Poslato“ ako nema potvrde slanja.</p></div>
+<div class="card"><h2>Uvoz kandidata</h2><p><b>Prvi uvoz = stara baza.</b> Sve osobe u prvom spisku ostaju arhivirane i neće se slati u red za nove. Tek novi brojevi iz narednog uvoza postaju „Novi“.</p>
+<input id="file" type="file" accept=".csv,.tsv,.xlsx,.xls" aria-label="Uvezi tabelu kandidata">
+<p id="last-import">Još nije uvezen nijedan spisak.</p><div class="inline"><button onclick="showTab('candidates')">Pogledaj kandidate</button><button class="secondary" onclick="exportCSV()">Izvezi lokalnu evidenciju</button></div></div>
+<div class="card"><h2>Šta radi besplatno?</h2><p>WhatsApp Business može automatski da pošalje pozdravnu poruku kad se kandidat prvi javi. Za kompletno automatsko vođenje razgovora do prijave potrebno je dodatno povezivanje sa sistemom za poruke.</p></div>
+</section>
+<section id="candidates" class="tab">
+<div class="card"><div class="row"><h2>Kandidati</h2><span id="count" class="pill">0</span></div>
+<input id="search" oninput="render()" placeholder="Pretraga imena, grada ili broja" autocomplete="off">
+<p>Stari ostaju arhivirani. Novim kandidatima se ništa ne šalje dok ne postoji povezana i dozvoljena automatizacija.</p>
+<div id="people" class="empty">Nema učitanih kandidata.</div></div></section>
+<section id="messages" class="tab">
+<div class="card"><h2>Pozdravna poruka</h2><p>Za ljude koji sami pošalju WhatsApp poruku. Promenljiva <b>{{ime}}</b> radi u našem šablonu, ali obična WhatsApp Business pozdravna poruka ne ume automatski da je popuni iz Drive tabele.</p>
+<label>Tekst poruke<textarea id="greet"></textarea></label>
+<div class="inline"><button onclick="saveTemplates()">Sačuvaj</button><button class="secondary" onclick="copyText('greet')">Kopiraj poruku</button></div></div>
+<div class="card"><h2>Sledeće pitanje kandidatu</h2><p>Koraci: grad → prevozno sredstvo → punoletstvo → raspoloživo vreme → kontakt za završetak prijave. Bez izmišljanja zarade ili uslova.</p>
+<label>Tekst pitanja<textarea id="qualify"></textarea></label><div class="inline"><button onclick="saveTemplates()">Sačuvaj</button><button class="secondary" onclick="copyText('qualify')">Kopiraj pitanje</button></div></div>
+<div class="card"><h2>Podsetnik</h2><p>Najviše jedan, samo uz odgovarajuću saglasnost. Trenutno je šablon sačuvan lokalno — automatsko slanje nije aktivno.</p>
+<label>Tekst podsetnika<textarea id="reminder"></textarea></label><button onclick="saveTemplates()">Sačuvaj</button></div>
+</section>
+<section id="settings" class="tab">
+<div class="card"><h2>Izvor kandidata</h2>
+<label>Google Drive / Sheets link<input id="sheet" placeholder="https://docs.google.com/spreadsheets/d/…"></label>
+<p>Link se čuva samo na ovom uređaju. Sam link ne daje aplikaciji pravo da čita ili menja privatnu tabelu. Za to je potrebno povezivanje Google naloga.</p><button onclick="saveSettings()">Sačuvaj link</button></div>
+<div class="card"><h2>Link da kandidat prvi piše</h2><p>Unesi broj svog WhatsApp Business naloga i dobićeš link za prijavni formular ili oglas. Kandidat sam inicira razgovor.</p>
+<label>Poslovni WhatsApp broj<input id="businessNumber" type="tel" placeholder="+3816xxxxxxxx"></label><div class="inline"><button onclick="makeIntakeLink()">Kopiraj link za prijavu</button></div></div>
+<div class="card"><h2>Privatnost i rezervna kopija</h2><p>Podaci kandidata čuvaju se lokalno u memoriji pregledača, ne na serveru. Brisanje podataka pregledača uklanja ovu evidenciju. Za produkciju treba zaključan backend sa ograničenim pristupom.</p>
+<div class="inline"><button class="secondary" onclick="exportCSV()">Izvezi CSV</button><button class="danger" onclick="clearLocal()">Obriši lokalnu evidenciju</button></div></div>
+</section>
+</main>
+<nav><button id="nav-overview" class="active" onclick="showTab('overview')"><b>▦</b>Pregled</button><button id="nav-candidates" onclick="showTab('candidates')"><b>♧</b>Kandidati</button><button id="nav-messages" onclick="showTab('messages')"><b>✉</b>Poruke</button><button id="nav-settings" onclick="showTab('settings')"><b>⚙</b>Podešavanja</button></nav>
+<div id="toast" role="status"></div><footer>Podaci nisu poslati nijednom kontaktu • v0.1</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+'use strict';
+var STORAGE='wolt_panel_v1',S={people:[],baseline:false,importedAt:null,settings:{sheet:'',businessNumber:''},templates:{greet:'Zdravo! Hvala što ste nam se javili povodom posla u Wolt dostavi. Rado ćemo vam objasniti kako funkcioniše prijava. Za početak, u kom gradu želite da radite?',qualify:'Hvala na odgovoru. Koje prevozno sredstvo planirate da koristite (bicikl, električni bicikl, skuter ili automobil) i da li imate 18 ili više godina?',reminder:'Zdravo! Samo proveravamo da li ste i dalje zainteresovani za informacije o Wolt poslu. Ako niste, slobodno nam napišite i nećemo vam slati dodatne poruke.'}};
+try{var old=localStorage.getItem(STORAGE);if(old){var loaded=JSON.parse(old);S={...S,...loaded,settings:{...S.settings,...loaded.settings},templates:{...S.templates,...loaded.templates}}}}catch(e){console.warn('Local data unavailable')}
+function persist(){try{localStorage.setItem(STORAGE,JSON.stringify(S))}catch(e){toast('Nema prostora za lokalno čuvanje')}}
+function toast(s){var t=document.getElementById('toast');t.textContent=s;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(function(){t.style.display='none'},3400)}
+function showTab(tab){document.querySelectorAll('.tab').forEach(function(n){n.classList.toggle('active',n.id===tab)});document.querySelectorAll('nav button').forEach(function(n){n.classList.toggle('active',n.id==='nav-'+tab)});window.scrollTo(0,0);render()}
+function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')}
+function number(s){var d=String(s||'').replace(/\D/g,'');if(d.slice(0,4)==='00381')d=d.slice(2);if(d.charAt(0)==='0'&&d.length>=9)d='381'+d.slice(1);if(d.length>=8&&d.charAt(0)==='6')d='381'+d;return d.length>=9&&d.length<=15?d:''}
+function field(o,names){var keys=Object.keys(o),target=names.map(norm);for(var i=0;i<keys.length;i++)if(target.includes(norm(keys[i])))return String(o[keys[i]]||'').trim();return ''}
+function nameValue(o){var name=field(o,['ime i prezime','ime prezime','ime i prezime kandidata','full name','name','kandidat','imeiprezime']);if(!name){name=[field(o,['ime','first name','firstname']),field(o,['prezime','last name','lastname'])].filter(Boolean).join(' ')}return name||'Bez imena'}
+function fromRecords(rows){var added=0,archive=0,invalid=0;var first=!S.baseline;var byPhone=new Map(S.people.map(function(p){return [p.phone,p]}));
+rows.forEach(function(o){var phone=number(field(o,['telefon','broj telefona','telefon kandidata','phone number','phone','mobile','mobilni','kontakt','broj','whatsapp','contact number']));if(!phone){invalid++;return}if(byPhone.has(phone))return;var p={id:phone,phone:phone,name:nameValue(o),city:field(o,['grad','city','mesto','location','opstina']),status:first?'stari':'nov',createdAt:new Date().toISOString()};S.people.push(p);byPhone.set(phone,p);added++;if(first)archive++});
+S.baseline=true;S.importedAt=new Date().toISOString();persist();render();toast(first?'Prva baza arhivirana: '+archive+' kandidata':'Novi kandidati: '+added+'; neprepoznati brojevi: '+invalid);
+document.getElementById('file').value=''}
+function loadFile(file){if(!file)return;var fr=new FileReader();fr.onerror=function(){toast('Nije moguće pročitati fajl')};fr.onload=function(){try{var rows=[];if(/\.xlsx?$|\.xls$/i.test(file.name)){if(!window.XLSX)throw Error('Excel čitač nije dostupan; pokušaj CSV');var wb=XLSX.read(fr.result,{type:'array',cellDates:true});var sheet=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(sheet,{defval:''})}else{var text=new TextDecoder('utf-8').decode(fr.result);if(window.XLSX){var wb2=XLSX.read(text,{type:'string'});rows=XLSX.utils.sheet_to_json(wb2.Sheets[wb2.SheetNames[0]],{defval:''})}else{var lines=text.split(/\r?\n/).filter(Boolean),separator=text.includes('\t')?'\t':';';var hdr=lines.shift().split(separator);rows=lines.map(function(line){var v=line.split(separator),o={};hdr.forEach(function(h,i){o[h]=v[i]||''});return o})}}if(!rows.length)throw Error('Tabela nema prepoznatih redova');fromRecords(rows)}catch(e){toast('Greška u uvozu: '+e.message)}};fr.readAsArrayBuffer(file)}
+document.getElementById('file').addEventListener('change',function(e){loadFile(e.target.files[0])});
+function h(s){return String(s||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+function render(){document.getElementById('total').textContent=S.people.length;document.getElementById('new').textContent=S.people.filter(function(x){return x.status==='nov'}).length;document.getElementById('inbound').textContent=S.people.filter(function(x){return x.status==='javio'}).length;document.getElementById('count').textContent=S.people.length;document.getElementById('last-import').textContent=S.importedAt?'Poslednji uvoz: '+new Date(S.importedAt).toLocaleString('sr-RS'):'Još nije uvezen nijedan spisak.';var q=norm(document.getElementById('search').value);var arr=S.people.filter(function(p){return norm(p.name+' '+p.city+' '+p.phone).includes(q)}).slice(-150).reverse();var target=document.getElementById('people');target.className=arr.length?'':'empty';target.innerHTML=arr.length?arr.map(function(p){var badge=p.status==='stari'?'Arhiviran':p.status==='nov'?'Novi':p.status==='javio'?'Kandidat se javio':p.status==='neuspeh'?'Neuspešno':'Obrađen';return '<article class="item"><div class="row"><div><strong>'+h(p.name)+'</strong><small>'+h(p.city||'Nepoznat grad')+' · +'+h(p.phone)+'</small></div><span class="pill '+(p.status==='nov'?'new':p.status==='javio'?'inbound':'')+'">'+badge+'</span></div>'+(p.status==='stari'?'':'<div class="inline"><button class="secondary" onclick="setStatus(\''+p.id+'\',\'javio\')">Javio se</button><button class="secondary" onclick="setStatus(\''+p.id+'\',\'neuspeh\')">Problem</button><button class="outline" onclick="openChat(\''+p.id+'\')">Otvori WA</button></div>')+'</article>'}).join(''):'Nema kandidata u ovom prikazu.'}
+function setStatus(id,status){var p=S.people.find(function(x){return x.id===id});if(!p||p.status==='stari')return;p.status=status;persist();render();toast('Status sačuvan samo lokalno; Google tabela nije ažurirana')}
+function openChat(id){var p=S.people.find(function(x){return x.id===id});if(!p||p.status!=='javio'){toast('Razgovor možeš otvoriti, ali slanje i status se ne potvrđuju automatski');return}window.open('https://wa.me/'+encodeURIComponent(p.phone),'_blank','noopener')}
+function saveTemplates(){['greet','qualify','reminder'].forEach(function(k){S.templates[k]=document.getElementById(k).value});persist();toast('Šabloni sačuvani na ovom uređaju')}
+function copyText(id){navigator.clipboard.writeText(document.getElementById(id).value.replace(/\{\{ime\}\}/g,'')).then(function(){toast('Tekst kopiran')}).catch(function(){toast('Kopiranje nije uspelo')})}
+function saveSettings(){S.settings.sheet=document.getElementById('sheet').value.trim();S.settings.businessNumber=document.getElementById('businessNumber').value.trim();persist();toast('Sačuvano lokalno — Drive nije povezan')}
+function makeIntakeLink(){saveSettings();var n=number(S.settings.businessNumber);if(!n){toast('Unesi ispravan WhatsApp Business broj');return}var link='https://wa.me/'+n+'?text='+encodeURIComponent('Zdravo, zainteresovan/a sam za Wolt posao. Želim informacije o prijavi.');navigator.clipboard.writeText(link).then(function(){toast('Link kopiran. Kandidat prvi šalje poruku.')}).catch(function(){toast(link)})}
+function exportCSV(){var head=['Ime','Grad','Telefon','Status','Dodat u evidenciju'];var rows=S.people.map(function(p){return [p.name,p.city,p.phone,p.status,p.createdAt]});var csv=[head].concat(rows).map(function(row){return row.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"'}).join(';')}).join('\r\n');var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='wolt-kandidati-evidencija.csv';a.click();setTimeout(function(){URL.revokeObjectURL(url)},1500);toast('Lokalna evidencija izvezena')}
+function clearLocal(){if(!confirm('Da li sigurno želiš da obrišeš lokalne podatke? Google tabela neće biti promenjena.'))return;localStorage.removeItem(STORAGE);location.reload()}
+['greet','qualify','reminder'].forEach(function(k){document.getElementById(k).value=S.templates[k]});document.getElementById('sheet').value=S.settings.sheet;document.getElementById('businessNumber').value=S.settings.businessNumber;render();if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(function(){});
+</script></body></html>
