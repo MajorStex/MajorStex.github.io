@@ -1,0 +1,80 @@
+/**
+ * WOLT Kandidati — private Google Sheets backend / live dashboard
+ * Google Apps Script, bound to or standalone from the WOLT AUTO spreadsheet.
+ * IMPORTANT: deploy as "Execute as me" AND "Who has access: Only myself".
+ * Never set Anyone; this project holds candidates' personal data.
+ * Does NOT send WhatsApp messages or update the original Excel file.
+ */
+const WOLT_SHEET_ID = '1vpTbCSxkNtHtJNbJ_hlM-wPuK1N52h2j0v2OQFk06x8';
+const SOURCE_TAB = 'META_ULAZ';
+const STATUS_TAB = 'STATUSI';
+const BLOCKED_TEST_IDS = new Set(['l:2327196261413284']);
+const MAX_ROWS = 2000;
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('Wolt Kandidati — uživo')
+    .addMetaTag('viewport','width=device-width, initial-scale=1, viewport-fit=cover');
+}
+
+function getOverview() {
+  const book = SpreadsheetApp.openById(WOLT_SHEET_ID);
+  const src = book.getSheetByName(SOURCE_TAB);
+  const states = book.getSheetByName(STATUS_TAB);
+  if (!src || !states) throw new Error('Nedostaje META_ULAZ ili STATUSI.');
+  const last = src.getLastRow();
+  const width = Math.min(18, src.getLastColumn());
+  if (last < 2) return { candidates:[], stats:{total:0,new:0,contacted:0,test:0}, checkedAt:new Date().toISOString() };
+  const block = src.getRange(1, 1, Math.min(last, MAX_ROWS+1), width).getDisplayValues();
+  const header = block.shift().map(s=>String(s||'').toLowerCase().trim());
+  const idx = (names,backup) => {
+    for (const n of names) { const i=header.findIndex(h=>h===n); if (i>=0) return i; }
+    return backup;
+  };
+  const iId = idx(['id','lead id','lead_id'],0);
+  const iDate = idx(['created_time','timestamp'],1);
+  const iName = idx(['full name','full_name','ime i prezime'],13);
+  const iPhone = idx(['phone','phone_number','telefon'],14);
+  const iEmail = idx(['email','e-mail'],15);
+  const iCity = idx(['city','grad','mesto'],-1);
+  const iStatus = idx(['lead_status'],17);
+  const stateMap=new Map();
+  if (states.getLastRow()>1) {
+    const sv=states.getRange(2,1,Math.min(states.getLastRow()-1,MAX_ROWS),6).getDisplayValues();
+    sv.forEach(r=>{if(r[0])stateMap.set(r[0],{status:r[1]||'',comment:r[2]||'',channel:r[3]||'',confirmedAt:r[4]||''});});
+  }
+  const dedup = new Set();
+  const candidates=[];
+  let tests=0, old=0, contacted=0, needsContact=0;
+  // Latest first by source ordering when applicable; sorting by parsed date is below.
+  for(const row of block) {
+    const id=String(row[iId]||'').trim();
+    const phone=String(row[iPhone]||'').trim();
+    if(!id || !phone) continue;
+    const normalized=phone.replace(/[^\d+]/g,'');
+    const state=stateMap.get(id)||{};
+    const test=BLOCKED_TEST_IDS.has(id) || /<test lead/i.test(row[iName]||'') || /<test lead/i.test(phone) || state.status==='TEST';
+    if(test){tests++;continue;}
+    if(dedup.has(normalized)){old++;continue;}
+    dedup.add(normalized);
+    const status=state.status||'NIJE POZVAN';
+    if(status==='POZVAN')contacted++; else if(status==='NIJE POZVAN')needsContact++;
+    candidates.push({
+      id, date:String(row[iDate]||''),
+      name:String(row[iName]||'').slice(0,140),
+      phone:phone.slice(0,50),
+      city:iCity>=0?String(row[iCity]||'').slice(0,100):'',
+      email:String(row[iEmail]||'').slice(0,140),
+      status, comment:(state.comment||'').slice(0,180),
+      channel:state.channel||'', leadStatus:String(row[iStatus]||'')
+    });
+  }
+  candidates.sort((a,b)=>(Date.parse(b.date)||0)-(Date.parse(a.date)||0));
+  return {
+    candidates:candidates.slice(0,500),
+    stats:{total:candidates.length,new:needsContact,contacted,test:tests,duplicate:old},
+    checkedAt:new Date().toISOString(),
+    source:'WOLT AUTO / META_ULAZ',
+    note:'Prikaz je uživo. Nijedna poruka se ne šalje; izvorni Excel se ne menja.'
+  };
+}
