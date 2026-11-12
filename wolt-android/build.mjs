@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import * as esbuild from 'esbuild';
 const base=path.resolve('../wolt-kandidati');
 if (!fs.existsSync(path.join(base,'index.html'))) throw new Error('Nedostaje izvorni Wolt panel');
 fs.mkdirSync('www',{recursive:true});
@@ -45,14 +46,15 @@ function openLivePanel(){
     return;
   }
   S.settings.liveUrl=url;persist();
-  var browser=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Browser;
-  if(browser&&browser.open){browser.open({url:url}).catch(function(){window.open(url,'_blank')})}
+  if(window.woltOpenUrl){window.woltOpenUrl(url).catch(function(){window.open(url,'_blank')})}
   else window.open(url,'_blank');
 }
 `;
 html=html.replace("function saveSettings(){",liveFns+"\nfunction saveSettings(){");
 html=html.replace('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>','');
 if(!html.includes('function openLivePanel()')) throw Error('Live panel handler missing');
+html=html.replace('</body>','<script src="./bridge.js"></script></body>');
 fs.writeFileSync('www/index.html',html);
 for(const f of ['icon.svg','manifest.json'])fs.copyFileSync(path.join(base,f),path.join('www',f));
+await esbuild.build({entryPoints:['bridge.js'],bundle:true,platform:'browser',format:'iife',outfile:'www/bridge.js'});
 console.log('Built Android v0.4 private live-panel launcher: '+html.length+' bytes');
