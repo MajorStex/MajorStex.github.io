@@ -24,7 +24,7 @@ nav button{flex:1;display:grid;gap:2px;justify-items:center;min-height:63px;font
 footer{text-align:center;color:#6e8b9e;font-size:11px;padding:10px}
 #toast{position:fixed;bottom:81px;left:12px;right:12px;border-radius:13px;padding:13px;background:#155044;color:#fff;z-index:10;display:none;text-align:center;font-size:13px}
 </style></head><body>
-<header><div class="brand"><div class="mark">W</div><div><h1>Wolt Kandidati</h1><small>Kontrolni panel · v0.1 · mobilna verzija</small></div></div></header>
+<header><div class="brand"><div class="mark">W</div><div><h1>Wolt Kandidati</h1><small>Kontrolni panel · v0.2 · mobilna verzija</small></div></div></header>
 <main>
 <div class="warning"><strong>⚠ PREGLED — NISU POVEZANI WHATSAPP NI GOOGLE DRIVE</strong><br>Ova verzija NE šalje poruke sama i NE menja tvoju Google tabelu. Za trajnu automatizaciju potrebna je autorizacija naloga i zvanična integracija. Podaci koje uvezeš čuvaju se samo u ovom pregledaču na uređaju.</div>
 <section id="overview" class="tab active">
@@ -49,6 +49,40 @@ footer{text-align:center;color:#6e8b9e;font-size:11px;padding:10px}
 <div class="card"><h2>Podsetnik</h2><p>Najviše jedan, samo uz odgovarajuću saglasnost. Trenutno je šablon sačuvan lokalno — automatsko slanje nije aktivno.</p>
 <label>Tekst podsetnika<textarea id="reminder"></textarea></label><button onclick="saveTemplates()">Sačuvaj</button></div>
 </section>
+
+<section id="knowledge" class="tab">
+ <div class="card">
+  <h2>🧠 Naučeni odgovori</h2>
+  <p>Ovde ti jednom napišeš kako treba odgovoriti, a panel čuva odgovor i povezuje ga sa sličnim pitanjima. <strong>Ne čita WhatsApp poruke samostalno</strong> dok ne postoji odobrena integracija. Novi odgovori se ne šalju automatski iz ovog panela.</p>
+  <label>Pitanje kandidata<textarea id="kbQuestion" style="min-height:82px" placeholder="Npr. Koliko mogu da zaradim kao dostavljač?"></textarea></label>
+  <label style="margin-top:10px">Tvoj odobreni odgovor<textarea id="kbAnswer" style="min-height:120px" placeholder="Unesi proverenu informaciju. Ako nisi siguran u uslov ili iznos, nemoj ga izmišljati."></textarea></label>
+  <label style="margin-top:10px">Slične formulacije (neobavezno; jedna po redu)<textarea id="kbAliases" style="min-height:85px" placeholder="Kolika je zarada?&#10;Kako se obračunava isplata?"></textarea></label>
+  <p>Bez ličnih podataka kandidata. Odgovor možeš kasnije urediti ili zameniti. Samo ručno odobreni odgovori mogu biti označeni kao visoko pouzdani.</p>
+  <div class="inline"><button onclick="saveKnowledge()">Sačuvaj i odobri odgovor</button><button class="secondary" onclick="resetKBForm()">Novo pitanje</button></div>
+ </div>
+ <div class="card">
+  <h2>🔎 Proveri da li je naučila</h2>
+  <label>Unesi pitanje u drugoj formulaciji<input id="kbTestQ" placeholder="Npr. Koja je plata za dostavu?"></label>
+  <div class="inline" style="margin-top:10px"><button onclick="testKnowledge()">Pronađi odgovor</button><button class="secondary" onclick="addUnknown()">Sačuvaj nepoznato pitanje</button></div>
+  <div id="kbResult" style="margin-top:12px" class="empty">Ovde će se pojaviti predlog odgovora ili neutralna poruka.</div>
+ </div>
+ <div class="card">
+  <h2>💬 Neutralan odgovor</h2>
+  <p>Ako nema dovoljno sigurnog odgovora: zahvali se, nemoj obećavati „za minut“, obavesti tebe i sačuvaj pitanje za proveru.</p>
+  <label>Poruka kada odgovor nije poznat<textarea id="kbFallback" style="min-height:94px"></textarea></label>
+  <button onclick="saveFallback()">Sačuvaj neutralni odgovor</button>
+ </div>
+ <div class="card">
+  <div class="row"><h2 style="margin:0">Za proveru</h2><span class="pill" id="kbUnknownCount">0</span></div>
+  <p>Ovo su pitanja koja si u testu označio kao nepoznata. U budućem povezanom sistemu tu bi se automatski pojavljivala nepoznata pitanja kandidata.</p>
+  <div id="kbUnknownList" class="empty">Trenutno nema pitanja za proveru.</div>
+ </div>
+ <div class="card">
+  <div class="row"><h2 style="margin:0">Baza odgovora</h2><span class="pill" id="kbCount">0</span></div>
+  <div class="inline" style="margin-top:10px"><button class="secondary" onclick="exportKnowledge()">Sačuvaj kopiju baze</button><label class="button outline" style="margin:0">Uvezi kopiju<input type="file" id="kbImport" accept=".json" style="display:none" onchange="importKnowledge(this.files[0])"></label></div>
+  <div id="kbList" class="empty">Još nema naučenih odgovora.</div>
+ </div>
+</section>
 <section id="settings" class="tab">
 <div class="card"><h2>Izvor kandidata</h2>
 <label>Google Drive / Sheets link<input id="sheet" placeholder="https://docs.google.com/spreadsheets/d/…"></label>
@@ -59,12 +93,12 @@ footer{text-align:center;color:#6e8b9e;font-size:11px;padding:10px}
 <div class="inline"><button class="secondary" onclick="exportCSV()">Izvezi CSV</button><button class="danger" onclick="clearLocal()">Obriši lokalnu evidenciju</button></div></div>
 </section>
 </main>
-<nav><button id="nav-overview" class="active" onclick="showTab('overview')"><b>▦</b>Pregled</button><button id="nav-candidates" onclick="showTab('candidates')"><b>♧</b>Kandidati</button><button id="nav-messages" onclick="showTab('messages')"><b>✉</b>Poruke</button><button id="nav-settings" onclick="showTab('settings')"><b>⚙</b>Podešavanja</button></nav>
-<div id="toast" role="status"></div><footer>Podaci nisu poslati nijednom kontaktu • v0.1</footer>
+<nav><button id="nav-overview" class="active" onclick="showTab('overview')"><b>▦</b>Pregled</button><button id="nav-candidates" onclick="showTab('candidates')"><b>♧</b>Kandidati</button><button id="nav-messages" onclick="showTab('messages')"><b>✉</b>Poruke</button><button id="nav-knowledge" onclick="showTab('knowledge')"><b>🧠</b>Odgovori</button><button id="nav-settings" onclick="showTab('settings')"><b>⚙</b>Podešavanja</button></nav>
+<div id="toast" role="status"></div><footer>Podaci nisu poslati nijednom kontaktu • v0.2</footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 'use strict';
-var STORAGE='wolt_panel_v1',S={people:[],baseline:false,importedAt:null,settings:{sheet:'',businessNumber:''},templates:{greet:'Dobar dan! Hvala što ste nam se javili povodom mogućnosti angažovanja u Wolt dostavi preko našeg partnerskog tima. Rado ćemo vam objasniti uslove i postupak prijave. Za početak, napišite nam grad u kom želite da radite, koje prevozno sredstvo koristite i da li imate najmanje 18 godina. Nakon vašeg odgovora šaljemo sledeće korake. Ukoliko ne želite dalju komunikaciju, napišite STOP.',qualify:'Hvala na odgovoru. Koje prevozno sredstvo planirate da koristite (bicikl, električni bicikl, skuter ili automobil) i da li imate 18 ili više godina?',reminder:'Zdravo! Samo proveravamo da li ste i dalje zainteresovani za informacije o Wolt poslu. Ako niste, slobodno nam napišite i nećemo vam slati dodatne poruke.'}};
+var STORAGE='wolt_panel_v1',S={people:[],baseline:false,importedAt:null,knowledge:[],unknown:[],fallback:'Hvala vam na pitanju! Da bismo vam dali tačnu informaciju, proverićemo detalje i javićemo vam se čim dobijemo potvrdu. Hvala na strpljenju.',settings:{sheet:'',businessNumber:''},templates:{greet:'Dobar dan! Hvala što ste nam se javili povodom mogućnosti angažovanja u Wolt dostavi preko našeg partnerskog tima. Rado ćemo vam objasniti uslove i postupak prijave. Za početak, napišite nam grad u kom želite da radite, koje prevozno sredstvo koristite i da li imate najmanje 18 godina. Nakon vašeg odgovora šaljemo sledeće korake. Ukoliko ne želite dalju komunikaciju, napišite STOP.',qualify:'Hvala na odgovoru. Koje prevozno sredstvo planirate da koristite (bicikl, električni bicikl, skuter ili automobil) i da li imate 18 ili više godina?',reminder:'Zdravo! Samo proveravamo da li ste i dalje zainteresovani za informacije o Wolt poslu. Ako niste, slobodno nam napišite i nećemo vam slati dodatne poruke.'}};
 try{var old=localStorage.getItem(STORAGE);if(old){var loaded=JSON.parse(old);S={...S,...loaded,settings:{...S.settings,...loaded.settings},templates:{...S.templates,...loaded.templates}}}}catch(e){console.warn('Local data unavailable')}
 function persist(){try{localStorage.setItem(STORAGE,JSON.stringify(S))}catch(e){toast('Nema prostora za lokalno čuvanje')}}
 function toast(s){var t=document.getElementById('toast');t.textContent=s;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(function(){t.style.display='none'},3400)}
@@ -89,5 +123,30 @@ function saveSettings(){S.settings.sheet=document.getElementById('sheet').value.
 function makeIntakeLink(){saveSettings();var n=number(S.settings.businessNumber);if(!n){toast('Unesi ispravan WhatsApp Business broj');return}var link='https://wa.me/'+n+'?text='+encodeURIComponent('Zdravo, zainteresovan/a sam za Wolt posao. Želim informacije o prijavi.');navigator.clipboard.writeText(link).then(function(){toast('Link kopiran. Kandidat prvi šalje poruku.')}).catch(function(){toast(link)})}
 function exportCSV(){var head=['Ime','Grad','Telefon','Status','Dodat u evidenciju'];var rows=S.people.map(function(p){return [p.name,p.city,p.phone,p.status,p.createdAt]});var csv=[head].concat(rows).map(function(row){return row.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"'}).join(';')}).join('\r\n');var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='wolt-kandidati-evidencija.csv';a.click();setTimeout(function(){URL.revokeObjectURL(url)},1500);toast('Lokalna evidencija izvezena')}
 function clearLocal(){if(!confirm('Da li sigurno želiš da obrišeš lokalne podatke? Google tabela neće biti promenjena.'))return;localStorage.removeItem(STORAGE);location.reload()}
-['greet','qualify','reminder'].forEach(function(k){document.getElementById(k).value=S.templates[k]});document.getElementById('sheet').value=S.settings.sheet;document.getElementById('businessNumber').value=S.settings.businessNumber;render();if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(function(){});
+
+/* FAQ library: manual approval, conservative retrieval, local-only, no messaging integration. */
+function qNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'dj').replace(/[^a-z0-9čćšž]+/g,' ').trim().replace(/\s+/g,' ')}
+function qTok(s){var stop=['sam','smo','ste','kako','koliko','koja','koji','koje','moze','mogu','da','li','je','su','se','sa','u','na','za','od','do','a','i','ili','mi','me','vi','nam','vam','u','wolt','woltu','wolta','posao','dostava','dostavi'];return qNorm(s).split(' ').filter(function(t){return t.length>2&&!stop.includes(t)}).map(function(t){return t.replace(/(ovima|anjima|anjem|enje|anje|ima|ama|ova|ovi|ija|ija|uje|aju|ati|iti|uje|anje|ost|ovi|om|em|a|e|u|i)$/,'').slice(0,10)}).filter(Boolean)}
+function jaccard(a,b){var x=new Set(a),y=new Set(b),inter=0;x.forEach(function(k){if(y.has(k))inter++});return x.size||y.size?inter/(x.size+y.size-inter):0}
+function bigrams(s){s=qNorm(s).replace(/ /g,'');var out=[];for(var i=0;i<s.length-1;i++)out.push(s.slice(i,i+2));return out}
+function dice(a,b){var x=bigrams(a),y=bigrams(b),count={};x.forEach(function(g){count[g]=(count[g]||0)+1});var hit=0;y.forEach(function(g){if(count[g]>0){hit++;count[g]--}});return x.length+y.length?2*hit/(x.length+y.length):0}
+function scoreFAQ(query,pattern){var qa=qNorm(query),pa=qNorm(pattern);if(!qa||!pa)return 0;if(qa===pa)return 1;var overlap=jaccard(qTok(qa),qTok(pa)),ch=dice(qa,pa);return Math.max(0.57*overlap+0.43*ch, (qa.includes(pa)||pa.includes(qa))&&Math.min(qa.length,pa.length)>12?0.77:0)}
+function findKnowledge(query){var matches=(S.knowledge||[]).map(function(k){return {item:k,score:Math.max.apply(null,[k.question].concat(k.aliases||[]).map(function(pattern){return scoreFAQ(query,pattern)}))}}).sort(function(a,b){return b.score-a.score});return matches[0]||null}
+function resetKBForm(){['kbQuestion','kbAnswer','kbAliases'].forEach(function(k){document.getElementById(k).value=''});document.getElementById('kbQuestion').dataset.edit='';toast('Unesi novo pitanje')}
+function saveKnowledge(){var q=document.getElementById('kbQuestion').value.trim(),a=document.getElementById('kbAnswer').value.trim(),aliases=document.getElementById('kbAliases').value.split('\n').map(function(s){return s.trim()}).filter(Boolean).slice(0,20),edit=document.getElementById('kbQuestion').dataset.edit;if(q.length<8||a.length<8){toast('Unesi celo pitanje i odgovor');return}var previous=(S.knowledge||[]).find(function(k){return k.id===edit});var duplicates=(S.knowledge||[]).some(function(k){return k.id!==edit&&qNorm(k.question)===qNorm(q)});if(duplicates){toast('Takvo pitanje već postoji. Uredi prethodni odgovor.');return}var item={id:previous?previous.id:'faq_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),question:q,answer:a,aliases:aliases,approved:true,updatedAt:new Date().toISOString(),createdAt:previous?previous.createdAt:new Date().toISOString()};if(previous){S.knowledge=S.knowledge.map(function(k){return k.id===edit?item:k})}else{S.knowledge.push(item)}
+S.unknown=(S.unknown||[]).filter(function(u){return scoreFAQ(u.question,q)<0.98});persist();renderKnowledge();resetKBForm();toast('Odgovor sačuvan — sada je deo baze')}
+function editKnowledge(id){var k=(S.knowledge||[]).find(function(x){return x.id===id});if(!k)return;document.getElementById('kbQuestion').value=k.question;document.getElementById('kbAnswer').value=k.answer;document.getElementById('kbAliases').value=(k.aliases||[]).join('\n');document.getElementById('kbQuestion').dataset.edit=id;showTab('knowledge');document.getElementById('kbQuestion').scrollIntoView({behavior:'smooth',block:'center'});toast('Izmeni i sačuvaj odgovor')}
+function delKnowledge(id){if(!confirm('Obrisati naučeni odgovor?'))return;S.knowledge=S.knowledge.filter(function(k){return k.id!==id});persist();renderKnowledge();toast('Odgovor obrisan')}
+function testKnowledge(){var q=document.getElementById('kbTestQ').value.trim();if(!q){toast('Unesi probno pitanje');return}var m=findKnowledge(q),result=document.getElementById('kbResult');result.className='';var pct=m?Math.round(100*m.score):0;if(m&&m.score>=.84){result.innerHTML='<p><span class="pill new">Pouzdan predlog · '+pct+'%</span></p><strong>'+h(m.item.question)+'</strong><p>'+h(m.item.answer)+'</p><button class="secondary" onclick="copyKnowledge(\''+m.item.id+'\')">Kopiraj odgovor</button>'}else if(m&&m.score>=.52){result.innerHTML='<p><span class="pill">Sličnost '+pct+'% — potrebna provera</span></p><strong>'+h(m.item.question)+'</strong><p>'+h(m.item.answer)+'</p><p>Nemoj automatski slati dok ne potvrdiš da je ovo isto pitanje.</p><button class="secondary" onclick="copyKnowledge(\''+m.item.id+'\')">Kopiraj odgovor</button>'}else{result.innerHTML='<p><span class="pill">Nema dovoljno sigurnog odgovora</span></p><p>'+h(S.fallback)+'</p><p>Sačuvaj pitanje za pregled da bi ga naučila sledeći put.</p>'}}
+function addUnknown(){var q=document.getElementById('kbTestQ').value.trim();if(q.length<5){toast('Unesi pitanje kandidata');return}if((S.unknown||[]).some(function(u){return qNorm(u.question)===qNorm(q)})){toast('Pitanje je već u listi');return}S.unknown.push({id:'unknown_'+Date.now().toString(36),question:q,createdAt:new Date().toISOString()});persist();renderKnowledge();toast('Pitanje dodato za proveru')}
+function answerUnknown(id){var u=(S.unknown||[]).find(function(o){return o.id===id});if(!u)return;document.getElementById('kbQuestion').value=u.question;document.getElementById('kbAnswer').value='';document.getElementById('kbAliases').value='';document.getElementById('kbQuestion').dataset.edit='';document.getElementById('kbQuestion').scrollIntoView({behavior:'smooth',block:'center'});toast('Upiši odobren odgovor pa sačuvaj')}
+function delUnknown(id){S.unknown=S.unknown.filter(function(x){return x.id!==id});persist();renderKnowledge()}
+function saveFallback(){S.fallback=document.getElementById('kbFallback').value.trim();if(S.fallback.length<12){toast('Neutralan odgovor mora biti smislen');return}persist();toast('Neutralni odgovor je sačuvan')}
+function copyKnowledge(id){var k=S.knowledge.find(function(x){return x.id===id});if(k)navigator.clipboard.writeText(k.answer).then(function(){toast('Odgovor kopiran')}).catch(function(){toast('Kopiranje nije uspelo')})}
+function renderKnowledge(){document.getElementById('kbCount').textContent=(S.knowledge||[]).length;document.getElementById('kbUnknownCount').textContent=(S.unknown||[]).length;var target=document.getElementById('kbList');target.className=S.knowledge.length?'':'empty';target.innerHTML=S.knowledge.length?S.knowledge.slice().reverse().map(function(k){return '<div class="item"><strong>'+h(k.question)+'</strong><p>'+h(k.answer)+'</p><small>Odobreno · '+(k.aliases||[]).length+' dodatnih formulacija</small><div class="inline"><button class="secondary" onclick="editKnowledge(\''+k.id+'\')">Uredi</button><button class="outline" onclick="copyKnowledge(\''+k.id+'\')">Kopiraj</button><button class="danger" onclick="delKnowledge(\''+k.id+'\')">Obriši</button></div></div>'}).join(''):'Još nema naučenih odgovora.';var ut=document.getElementById('kbUnknownList');ut.className=S.unknown.length?'':'empty';ut.innerHTML=S.unknown.length?S.unknown.map(function(u){return '<div class="item"><strong>'+h(u.question)+'</strong><div class="inline"><button class="secondary" onclick="answerUnknown(\''+u.id+'\')">Nauči odgovor</button><button class="outline" onclick="delUnknown(\''+u.id+'\')">Ukloni</button></div></div>'}).join(''):'Trenutno nema pitanja za proveru.'}
+function exportKnowledge(){var payload={version:1,exportedAt:new Date().toISOString(),knowledge:S.knowledge,fallback:S.fallback},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='wolt-baza-odgovora.json';a.click();setTimeout(function(){URL.revokeObjectURL(url)},1500);toast('Baza odgovora sačuvana u JSON fajl')}
+function importKnowledge(file){if(!file)return;var fr=new FileReader();fr.onload=function(){try{var obj=JSON.parse(fr.result);if(!Array.isArray(obj.knowledge))throw Error('Neispravna kopija');var count=0;obj.knowledge.forEach(function(k){if(typeof k.question!=='string'||typeof k.answer!=='string'||!k.question.trim()||!k.answer.trim())return;if(S.knowledge.some(function(x){return qNorm(x.question)===qNorm(k.question)}))return;S.knowledge.push({id:'faq_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),question:k.question.slice(0,300),answer:k.answer.slice(0,3000),aliases:Array.isArray(k.aliases)?k.aliases.filter(function(x){return typeof x==='string'}).slice(0,20):[],approved:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});count++});persist();renderKnowledge();toast('Uvezeno odgovora: '+count)}catch(e){toast('Greška pri uvozu baze: '+e.message)}};fr.readAsText(file);document.getElementById('kbImport').value=''}
+
+['greet','qualify','reminder'].forEach(function(k){document.getElementById(k).value=S.templates[k]});
+document.getElementById('kbFallback').value=S.fallback;renderKnowledge();document.getElementById('sheet').value=S.settings.sheet;document.getElementById('businessNumber').value=S.settings.businessNumber;render();if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(function(){});
 </script></body></html>
