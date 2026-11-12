@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="sr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071a2a"><title>Wolt Kandidati — kopiraj kod</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,Arial,sans-serif;background:#071a2a;color:#eff8fc}*{box-sizing:border-box}body{margin:0;padding:28px 18px}
+main{max-width:520px;margin:auto}h1{font-size:23px;line-height:1.3}p{color:#b8ccda;line-height:1.6}
+.card{padding:22px;background:#122d40;border:1px solid #2f5162;border-radius:16px;margin-top:20px}
+button{width:100%;padding:17px 15px;font-weight:800;font-size:17px;border:0;border-radius:12px;background:#02cba9;color:#062c2c}
+button:disabled{opacity:.55}#status{min-height:35px;color:#bef3e6;font-size:14px;margin-top:14px}
+ol{line-height:1.8;padding-left:23px}a{color:#87d6ff}
+small{color:#8fa8b8}
+</style>
+</head><body><main>
+<h1>Wolt Kandidati — Google povezivanje</h1>
+<p>Ovo kopira samo programski kod za tvoj Apps Script. Ne sadrži imena ili brojeve kandidata.</p>
+<div class="card">
+<button id="copy" disabled>Kod se učitava…</button>
+<div id="status">Učitavam pripremljeni kod…</div>
+</div>
+<h2>Posle kopiranja</h2>
+<ol><li>Vrati se u Google Apps Script.</li><li>Tapni unutar <b>Code.gs</b>.</li><li>Izaberi sav postojeći tekst <code>myFunction</code> i obriši ga.</li><li>Drži prst u praznom editoru i izaberi <b>Paste / Nalepi</b>.</li><li>Tapni ikonicu <b>Save / Sačuvaj</b>.</li></ol>
+<p id="fallback"></p>
+<small>Važno: ne postavljaj web aplikaciju kao javnu. Izaberi pristup „Only myself“ pri povezivanju.</small>
+<script>
+let code='';
+const btn=document.getElementById('copy'),status=document.getElementById('status');
+const src='../wolt-android/apps-script/WOLT_JEDAN_FAJL.gs';
+fetch(src,{cache:'no-store'})
+.then(r=>{if(!r.ok)throw Error('Učitavanje nije uspelo');return r.text()})
+.then(s=>{if(!s.includes('function getOverview()')||!s.includes('function doGet()')||!s.includes('WOLT_INDEX_HTML'))throw Error('Nepotpun kod');
+code=s;btn.disabled=false;btn.textContent='Kopiraj ceo kod';status.textContent='Spremno — kopiranje jednim dodirom.';})
+.catch(()=>{status.textContent='Nije moguće učitati kod. Otvori rezervni link ispod.';document.getElementById('fallback').innerHTML='<a href="https://github.com/MajorStex/MajorStex.github.io/blob/main/wolt-android/apps-script/WOLT_JEDAN_FAJL.gs">Otvori kod na GitHub-u</a>';btn.textContent='Trenutno nedostupno';});
+btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(code);status.textContent='✅ KOPIRANO! Sada se vrati u Apps Script i nalepi u Code.gs.';btn.textContent='Kopirano ✓';}catch(e){status.textContent='Pregledač nije dozvolio kopiranje. Otvori rezervni link i izaberi Copy raw file.';document.getElementById('fallback').innerHTML='<a href="https://github.com/MajorStex/MajorStex.github.io/blob/main/wolt-android/apps-script/WOLT_JEDAN_FAJL.gs">Rezervno: GitHub kod</a>'; }});
+</script>
+</main></body></html>
