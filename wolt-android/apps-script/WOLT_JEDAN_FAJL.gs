@@ -101,6 +101,73 @@ function getOverview() {
 }
 
 
+
+/** Private status/learning backend. All outbound message delivery remains disabled. */
+function getAutomationSetup() {
+  const ss=SpreadsheetApp.openById(WOLT_SHEET_ID);
+  const p=ss.getSheetByName('PORUKE_PODESAVANJA');
+  const k=ss.getSheetByName('NAUCENI_ODGOVORI');
+  if(!p||!k) throw new Error('Nedostaju pomoćni listovi za poruke i odgovore.');
+  const pv=p.getRange(2,1,Math.max(1,p.getLastRow()-1),5).getDisplayValues();
+  const kv=k.getRange(2,1,Math.max(1,Math.min(200,k.getLastRow()-1)),7).getDisplayValues();
+  return {
+    messages:pv.filter(x=>x[0]).map(x=>({id:x[0],text:x[1],state:x[2],when:x[3]})),
+    answers:kv.filter(x=>x[0]).map(x=>({question:x[0],keywords:x[1],answer:x[2],approved:x[3],source:x[4]})),
+    sendingEnabled:false
+  };
+}
+
+function saveCandidateStatus(input) {
+  const id=String(input&&input.id||'').trim();
+  const status=String(input&&input.status||'').trim().toUpperCase();
+  const comment=String(input&&input.comment||'').trim();
+  const channel=String(input&&input.channel||'').trim();
+  const confirmed=Boolean(input&&input.confirmed);
+  const allowed=['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','GREŠKA','ODUSTAO','STOP'];
+  if(!id||id.length>130||!allowed.includes(status)) throw new Error('Neispravan kandidat ili status.');
+  if(comment.length>700) throw new Error('Komentar je predugačak.');
+  if(status==='POZVAN' && (!confirmed || !['WhatsApp','Viber','Telefon','Drugo'].includes(channel))){
+    throw new Error('Za status POZVAN potreban je stvarno potvrđen kontakt i kanal.');
+  }
+  const lock=LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const ss=SpreadsheetApp.openById(WOLT_SHEET_ID);
+    const leads=ss.getSheetByName(SOURCE_TAB);
+    const statuses=ss.getSheetByName(STATUS_TAB);
+    if(!leads||!statuses) throw new Error('Nedostaje evidencija.');
+    const max=Math.min(leads.getLastRow()-1,10000);
+    const leadIds=max>0?leads.getRange(2,1,max,1).getDisplayValues().map(r=>r[0]):[];
+    if(BLOCKED_TEST_IDS.has(id) || !leadIds.includes(id)) throw new Error('Testni ili nepoznat kandidat.');
+    const rows=Math.max(0,statuses.getLastRow()-1);
+    const ids=rows?statuses.getRange(2,1,rows,1).getDisplayValues().map(r=>r[0]):[];
+    const at=ids.indexOf(id);
+    const timestamp=(status==='POZVAN' && confirmed) ?
+       Utilities.formatDate(new Date(),'Europe/Belgrade','dd.MM.yyyy HH:mm:ss') : '';
+    const record=[id,status,comment,channel,timestamp,'Ručno potvrđeno u privatnom panelu; nije potvrda provajdera.'];
+    if(at>=0) statuses.getRange(at+2,1,1,6).setValues([record]);
+    else statuses.getRange(statuses.getLastRow()+1,1,1,6).setValues([record]);
+    return {ok:true,status:status};
+  } finally {lock.releaseLock();}
+}
+
+function addLearnedAnswer(input) {
+  const question=String(input&&input.question||'').trim();
+  const keywords=String(input&&input.keywords||'').trim();
+  const answer=String(input&&input.answer||'').trim();
+  if(question.length<4 || question.length>180 || answer.length<5 || answer.length>1500 || keywords.length>250) {
+    throw new Error('Popuni pitanje (4–180 znakova) i odgovor (5–1500 znakova).');
+  }
+  const lock=LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const tab=SpreadsheetApp.openById(WOLT_SHEET_ID).getSheetByName('NAUCENI_ODGOVORI');
+    if(!tab) throw new Error('Nedostaje baza odgovora.');
+    tab.appendRow([question,keywords,answer,'NE — čeka povezivanje','Unos vlasnika',Utilities.formatDate(new Date(),'Europe/Belgrade','dd.MM.yyyy HH:mm:ss'),'Nije automatski poslato nijednom kandidatu.']);
+    return {ok:true};
+  } finally {lock.releaseLock();}
+}
+
 const WOLT_INDEX_HTML = `<!doctype html>
 <html lang="sr">
 <head>
@@ -124,6 +191,16 @@ input{border:1px solid #406174;background:#102438;color:#fff;padding:12px;width:
 .badge{display:inline-block;border-radius:10px;background:#184a45;color:#b2f4df;padding:4px 7px;margin-top:7px;font-size:11px}
 .error{background:#59262b;color:#ffdddd}
 footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
+
+.panel{background:#122a3c;border:1px solid #345063;border-radius:14px;padding:14px;margin-top:14px}
+.panel h2{font-size:17px;margin:0 0 11px}
+.panel label{display:block;color:#b9d0dc;font-size:13px;margin-top:12px}
+.panel textarea,.panel select,.panel input{display:block;width:100%;margin:6px 0 10px;background:#091c2c;color:#fff;border:1px solid #406174;border-radius:9px;padding:11px;font:inherit}
+.panel textarea{min-height:90px;resize:vertical}
+.secondary{background:#233d51;color:#ecf7ff}
+.action{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.action button{flex:1}
+.note{color:#b4c9d6;font-size:12px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -138,6 +215,22 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 <div class="row"><button onclick="refresh()">Osveži sada</button></div>
 <input id="filter" type="search" placeholder="Pretraži ime, telefon ili grad" oninput="draw()">
 <section id="items"></section>
+<section class="panel" id="configPanel">
+<h2>Automatizacija poruka</h2>
+<p class="note"><b>WhatsApp i Viber: slanje isključeno.</b> Povezivanje sa Metom preuzima prijave automatski. Tekstove poruka i naučene odgovore čuvamo, ali nijedan prvi kontakt se ne šalje bez podržanog servisa.</p>
+<div id="msgTemplates" class="note">Učitavam predloge poruka…</div>
+</section>
+<section class="panel" id="knowledgePanel">
+<h2>Nauči aplikaciju odgovor</h2>
+<p class="note">Ovde unosiš primer pitanja i svoj odgovor. Čuva se u Google tabeli za buduću automatsku obradu kada povežemo podržani kanal.</p>
+<label>Kako je kandidat pitao?<textarea id="teachQ" placeholder="Primer: Koliko mogu da zaradim?"></textarea></label>
+<label>Slična pitanja / ključne reči<input id="teachKeywords" placeholder="plata, zarada, isplata"></label>
+<label>Tvoj odgovor<textarea id="teachA" placeholder="Ovde napiši odgovor koji želiš da zapamtimo."></textarea></label>
+<button onclick="learn()">Zapamti ovaj odgovor</button>
+<div id="teachStatus" class="note"></div>
+<div id="learned" class="note"></div>
+</section>
+
 <footer>Bezbednost: pristup samo ovlašćenom Google nalogu. Testni kandidati su izuzeti. Nema automatskog slanja WhatsApp poruka niti upisa u originalni Excel. Automatsko osvežavanje ekrana na 60 sekundi dok je otvoren.</footer>
 </main>
 <script>
@@ -171,12 +264,82 @@ function draw(){
   const phone=document.createElement('div');phone.className='meta';phone.textContent=x.phone;
   const date=document.createElement('div');date.className='meta';date.textContent=fmt(x.dateLabel||x.date)+(x.city?' · '+x.city:'');
   const status=document.createElement('span');status.className='badge';status.textContent=x.reapplicant ? x.status+' · PONOVNA PRIJAVA' : x.status;
-  box.append(name,phone,date,status);list.append(box);
+
+  const toggle=document.createElement('button');toggle.className='secondary';toggle.textContent='Evidentiraj kontakt / komentar';
+  toggle.style.marginTop='10px';
+  const edit=document.createElement('div');edit.className='panel';edit.style.display='none';
+  const choices=document.createElement('select');
+  for(const v of ['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','ODUSTAO','STOP','GREŠKA']){
+    const opt=document.createElement('option');opt.value=v;opt.textContent=v;choices.append(opt);
+  }
+  choices.value=['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','ODUSTAO','STOP','GREŠKA'].includes(x.status)?x.status:'NIJE POZVAN';
+  const channel=document.createElement('select');channel.className='contactChannel';
+  for(const v of ['','WhatsApp','Viber','Telefon','Drugo']){
+    const opt=document.createElement('option');opt.value=v;opt.textContent=v||'Izaberi kanal';channel.append(opt);
+  }
+  channel.value=x.channel||'';
+  const memo=document.createElement('textarea');memo.placeholder='Komentar (ako postoji)';memo.value=x.comment||'';
+  const save=document.createElement('button');save.textContent='Sačuvaj evidenciju';save.onclick=()=>saveCardStatus(x,edit);
+  const notice=document.createElement('div');notice.className='saveNotice note';
+  edit.append(choices,channel,memo,save,notice);
+  toggle.onclick=()=>{edit.style.display=edit.style.display==='none'?'block':'none'};
+  box.append(name,phone,date,status,toggle,edit);list.append(box);
  }
 }
+
+let configLoaded=false;
+function loadKnowledge() {
+ google.script.run.withSuccessHandler(data=>{
+  configLoaded=true;
+  const list=document.getElementById('msgTemplates');
+  list.replaceChildren();
+  for(const msg of data.messages||[]){
+   if(msg.id==='AUTO_SLANJE'||msg.id==='IZVOR')continue;
+   const p=document.createElement('p');
+   const b=document.createElement('b');b.textContent=msg.id+' — '+msg.state;
+   const line=document.createElement('div');line.textContent=msg.text;
+   p.append(b,line);list.append(p);
+  }
+  const learned=document.getElementById('learned');
+  learned.replaceChildren();
+  const title=document.createElement('p');
+  title.textContent='Pitanja u bazi: '+(data.answers||[]).length;
+  learned.append(title);
+ }).withFailureHandler(e=>{document.getElementById('msgTemplates').textContent='Greška: '+String(e.message||e)}).getAutomationSetup();
+}
+function learn() {
+ const q=document.getElementById('teachQ').value.trim();
+ const keywords=document.getElementById('teachKeywords').value.trim();
+ const answer=document.getElementById('teachA').value.trim();
+ const output=document.getElementById('teachStatus');
+ output.textContent='Upisujem u Google evidenciju…';
+ google.script.run.withSuccessHandler(()=>{
+  output.textContent='Sačuvano u bazi odgovora. Ovo NE šalje poruku kandidatu.';
+  document.getElementById('teachQ').value='';
+  document.getElementById('teachKeywords').value='';
+  document.getElementById('teachA').value='';
+  loadKnowledge();
+ }).withFailureHandler(e=>{output.textContent='Greška: '+String(e.message||e)}).addLearnedAnswer({question:q,keywords,answer});
+}
+function saveCardStatus(x,card) {
+ const status=card.querySelector('select').value;
+ const comment=card.querySelector('textarea').value.trim();
+ const channel=card.querySelector('.contactChannel').value;
+ const notice=card.querySelector('.saveNotice');
+ let confirmed=false;
+ if(status==='POZVAN') {
+   confirmed=window.confirm('Da li je kandidat ZAISTA kontaktiran? Status nije potvrda iz WhatsApp/Viber sistema.');
+   if(!confirmed)return;
+ }
+ notice.textContent='Upisujem status…';
+ google.script.run.withSuccessHandler(()=>{
+   notice.textContent='Evidencija je sačuvana. Osvežavam…';refresh();
+ }).withFailureHandler(e=>{notice.textContent='Greška: '+String(e.message||e)}).saveCandidateStatus({id:x.id,status,comment,channel,confirmed});
+}
+
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 setInterval(()=>{if(!document.hidden)refresh()},60000);
-refresh();
+refresh();loadKnowledge();
 </script>
 </body>
 </html>`;
