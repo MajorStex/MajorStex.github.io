@@ -74,7 +74,10 @@ function getOverview() {
     if(test){tests++;continue;}
     if(dedup.has(normalized)){old++;continue;}
     dedup.add(normalized);
-    const status=archived.has(normalized) ? 'STARI — NE SLATI' : (state.status||'NIJE POZVAN');
+    // A fresh Meta form submission is a new expression of interest even if the phone exists in the old Excel.
+    // Prior contact is recorded as context, not an automatic block. Respect any explicit STOP / opt-out.
+    const isReapplicant=archived.has(normalized);
+    const status=state.status||'NIJE POZVAN';
     if(status==='POZVAN')contacted++; else if(status==='NIJE POZVAN')needsContact++;
     candidates.push({
       id, date:String(row[iDate]||''),
@@ -83,7 +86,7 @@ function getOverview() {
       phone:phone.replace(/^p:/i,'').trim().slice(0,50),
       city:iCity>=0?String(row[iCity]||'').slice(0,100):'',
       email:String(row[iEmail]||'').slice(0,140),
-      status, comment:(state.comment||'').slice(0,180),
+      status, reapplicant:isReapplicant, comment:(state.comment||'').slice(0,180),
       channel:state.channel||'', leadStatus:String(row[iStatus]||'')
     });
   }
@@ -167,7 +170,7 @@ function draw(){
   const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
   const phone=document.createElement('div');phone.className='meta';phone.textContent=x.phone;
   const date=document.createElement('div');date.className='meta';date.textContent=fmt(x.dateLabel||x.date)+(x.city?' · '+x.city:'');
-  const status=document.createElement('span');status.className='badge';status.textContent=x.status;
+  const status=document.createElement('span');status.className='badge';status.textContent=x.reapplicant ? x.status+' · PONOVNA PRIJAVA' : x.status;
   box.append(name,phone,date,status);list.append(box);
  }
 }
