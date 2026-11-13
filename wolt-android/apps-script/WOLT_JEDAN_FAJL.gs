@@ -5,6 +5,7 @@
  * Never set Anyone; this project holds candidates' personal data.
  * Does NOT send WhatsApp messages or update the original Excel file.
  */
+const WOLT_WEB_VERSION = '1.2.0';
 const WOLT_SHEET_ID = '1vpTbCSxkNtHtJNbJ_hlM-wPuK1N52h2j0v2OQFk06x8';
 const SOURCE_TAB = 'META_ULAZ';
 const STATUS_TAB = 'STATUSI';
@@ -178,6 +179,7 @@ const WOLT_INDEX_HTML = `<!doctype html>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,Roboto,sans-serif;background:#091525;color:#e9f9ff}
 *{box-sizing:border-box}body{margin:0;background:#091525;padding:0 0 30px}
 header{position:sticky;top:0;background:#102638eF;padding:15px 16px;border-bottom:1px solid #314a5b;z-index:1}
+.appHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.versionPanel{display:flex;flex-direction:column;align-items:flex-end;gap:1px;background:#1b3648;border:1px solid #38556a;border-radius:10px;padding:7px 11px;white-space:nowrap}.versionPanel strong{font-size:13px;font-weight:800;color:#e9f9ff;letter-spacing:.2px}.versionPanel span{font-size:10px;color:#9fb9cb}@media(max-width:480px){.appHeader{flex-wrap:nowrap}.versionPanel{padding:6px 8px}.versionPanel span{font-size:9px}}
 h1{margin:0;font-size:20px}small,p{color:#98b5c8}small{display:block;margin-top:4px}
 main{padding:15px;max-width:800px;margin:auto}.status{margin-bottom:12px;padding:12px;background:#233424;border-radius:12px;color:#dff3d4;font-size:13px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{padding:13px 8px;text-align:center;background:#173448;border:1px solid #2b5060;border-radius:14px}
@@ -204,7 +206,7 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 </style>
 </head>
 <body>
-<header><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.2.0</strong><span>13.11.2026.</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 <div class="stats">
