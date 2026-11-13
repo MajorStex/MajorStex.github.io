@@ -40,12 +40,71 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 .registration-open{display:flex;align-items:center;justify-content:center;background:#00c5a6;color:#052927;text-decoration:none;font-weight:800;border-radius:10px;padding:10px 14px;min-height:43px}
 .registration-panel .mini{font-size:12px;color:#b4d6d1;margin:11px 0 0}
 .registration-panel .copy-result{font-size:12px;color:#d1ffee;margin-top:8px;min-height:17px}
+
+/* Candidate-first mobile dashboard */
+:root{--wolt:#02c7a5;--viber:#7360ba}
+body{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.appHeader{padding:13px 15px}
+main{padding:12px;max-width:900px}
+.status{font-size:12px;margin-bottom:10px;padding:10px}
+.stats{gap:7px}.stat{padding:10px 5px}.num{font-size:23px}
+.contactToolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.contactToolbar input{flex:1 1 200px;min-width:0;margin:0}
+.contactToolbar select{border-radius:10px;background:#102438;color:#fff;border:1px solid #406174;padding:10px;min-height:43px;flex:0 1 165px}
+.listHint{font-size:12px;color:#a0c2cc;margin:8px 2px 10px}
+#items{margin:6px 0}
+.item{padding:14px;margin:10px 0;border-radius:15px;box-shadow:0 3px 10px #00000020}
+.contactHeader{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.contactHeader .name{line-height:1.35;font-size:16px}
+.contactHeader .meta{font-size:12px;margin:4px 0 0}
+.contactDate{font-size:11px;color:#8fb1c3;white-space:nowrap}
+.contactInfo{margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;font-size:12px}
+.contactInfo > div{min-width:0;overflow-wrap:anywhere}
+.contactInfo strong{display:block;color:#86b0c2;font-weight:600;font-size:11px;margin-bottom:2px}
+.contactInfo a{color:#d5faff;text-decoration:none}
+.contactButtons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.contactButtons button{min-height:48px;font-size:15px;padding:8px 9px}
+.contactButtons .waButton{background:#1ebd72;color:#061e15}
+.contactButtons .viberButton{background:#7360ba;color:#fff}
+.contactButtons button:disabled{opacity:.48;cursor:not-allowed}
+.contactFoot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:9px}
+.contactFoot button{min-height:37px;background:#244658;color:#e4f5fa;font-size:12px;padding:7px 10px;flex:1}
+.contactFoot .markSent{background:#284d48;color:#ddfff0}
+.contactNotice{min-height:0;font-size:12px;color:#b9e2e8;line-height:1.45;margin-top:7px;white-space:pre-wrap}
+.item .badge{margin-top:0}
+.item details{margin-top:8px;border-top:1px solid #2e5062;padding-top:9px}
+.item details summary{cursor:pointer;color:#d5e7ef;font-size:12px;font-weight:600}
+.item details .meta{margin-top:7px}
+.item details .panel{padding:9px 0 0;background:transparent;border:0}
+.advancedSection{margin-top:18px}
+.advancedSection > summary{cursor:pointer;color:#c6e2ec;font-size:13px;font-weight:700;padding:14px;border:1px solid #39586b;border-radius:12px;background:#152e40}
+.advancedSection[open] > summary{border-radius:12px 12px 0 0}
+.advancedSection .panel{margin-top:0}
+.advancedSection .registration-panel{margin-top:13px}
+@media(max-width:390px){.contactToolbar select{flex:1 1 100%}.contactButtons button{font-size:14px}.contactDate{white-space:normal}.contactInfo{grid-template-columns:1fr 1fr}}
+
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.3.2</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.0</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
+
+<div class="stats">
+ <div class="stat"><div class="num" id="total">–</div><div class="tag">Kandidati</div></div>
+ <div class="stat"><div class="num" id="new">–</div><div class="tag">Nije pozvan</div></div>
+ <div class="stat"><div class="num" id="contacted">–</div><div class="tag">Pozvan</div></div>
+</div>
+<div class="contactToolbar">
+<input id="filter" type="search" placeholder="Ime, telefon, grad, e-mail…" oninput="draw()" autocomplete="off">
+<select id="contactFilter" aria-label="Filter kandidata" onchange="draw()">
+<option value="need">Za kontakt</option><option value="all">Svi kandidati</option><option value="contacted">Kontaktirani</option><option value="stop">STOP / Odustao</option>
+</select>
+<button type="button" class="secondary" style="flex:0 0 auto;min-height:43px" onclick="refresh()">↻ Osveži</button>
+</div>
+<div class="listHint" id="listHint">Nove Meta prijave se pojavljuju nakon sinhronizacije; automatska provera na 30 sekundi dok je panel otvoren.</div>
+<section id="items"></section>
+<details class="advancedSection"><summary>Registracioni link i napredna podešavanja</summary>
 <section class="registration-panel" aria-label="Registracija kandidata">
 <h2>Prvi korak: registracija kandidata</h2>
 <p>Pošalji zainteresovanom kandidatu glavni formular. Na osnovu grada i njegovih zahteva proveravamo odgovarajuću partnersku agenciju.</p>
@@ -56,14 +115,6 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 <p class="mini">Lične podatke, uključujući JMBG ako ga formular zahteva, kandidat unosi u formular, ne u WhatsApp razgovoru. Kopiranje poruke ne znači da je poslata.</p>
 <div id="registrationCopyResult" class="copy-result" aria-live="polite"></div>
 </section>
-<div class="stats">
- <div class="stat"><div class="num" id="total">–</div><div class="tag">Kandidati</div></div>
- <div class="stat"><div class="num" id="new">–</div><div class="tag">Nije pozvan</div></div>
- <div class="stat"><div class="num" id="contacted">–</div><div class="tag">Pozvan</div></div>
-</div>
-<div class="row"><button onclick="refresh()">Osveži sada</button></div>
-<input id="filter" type="search" placeholder="Pretraži ime, telefon ili grad" oninput="draw()">
-<section id="items"></section>
 <section class="panel" id="configPanel">
 <h2>Automatizacija poruka</h2>
 <p class="note"><b>WhatsApp i Viber: slanje isključeno.</b> Povezivanje sa Metom preuzima prijave automatski. Tekstove poruka i naučene odgovore čuvamo, ali nijedan prvi kontakt se ne šalje bez podržanog servisa.</p>
@@ -79,8 +130,9 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 <div id="teachStatus" class="note"></div>
 <div id="learned" class="note"></div>
 </section>
+</details>
 
-<footer>Bezbednost: pristup samo ovlašćenom Google nalogu. Testni kandidati su izuzeti. Nema automatskog slanja WhatsApp poruka niti upisa u originalni Excel. Automatsko osvežavanje ekrana na 60 sekundi dok je otvoren.</footer>
+<footer>Bezbednost: pristup samo ovlašćenom Google nalogu. Testni kandidati su izuzeti. Nema automatskog slanja WhatsApp poruka niti upisa u originalni Excel. Automatsko osvežavanje ekrana na 30 sekundi dok je otvoren.</footer>
 </main>
 <script>
 const REGISTRATION_URL="https://docs.google.com/forms/d/e/1FAIpQLScjQwrzjCLhxMIUHDTBi0V93FaxAX7C1-9ZpV-Iew6oUbrtAA/viewform";
@@ -121,55 +173,142 @@ function refresh(){
   document.getElementById('status').className='status error';
  }).getOverview();
 }
-function draw(){
- const list=document.getElementById('items');
- list.replaceChildren();
- const q=document.getElementById('filter').value.trim().toLowerCase();
- const filtered=all.filter(x=>(x.name+' '+x.phone+' '+x.city).toLowerCase().includes(q));
- if(!filtered.length){let el=document.createElement('p');el.textContent=hasLoaded?'Nema prijava za ovaj filter.':'Učitavanje…';list.append(el);return}
- for(const x of filtered){
-  const box=document.createElement('article');box.className='item';
-  const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
-  const phone=document.createElement('div');phone.className='meta';phone.textContent=x.phone;
-  const date=document.createElement('div');date.className='meta';date.textContent=fmt(x.dateLabel||x.date)+(x.city?' · '+x.city:'');
-  const status=document.createElement('span');status.className='badge';status.textContent=x.reapplicant ? x.status+' · PONOVNA PRIJAVA' : x.status;
 
-  const wa=document.createElement('button');
-  wa.className='secondary';
-  wa.style.marginTop='10px';
-  wa.style.marginRight='8px';
-  wa.style.background='#186b58';
-  const blocked=/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim()) || !(/^\+?[0-9 ()-]{9,}$/.test(String(x.phone||'')));
-  wa.textContent=blocked ? 'WhatsApp kontakt blokiran / bez broja' : 'Prva WhatsApp poruka (ručno)';
-  wa.disabled=blocked;
-  if(blocked)wa.style.opacity='.5';
-  wa.onclick=()=>{
-    const number=String(x.phone||'').replace(/\D/g,'');
-    if(!/^381[0-9]{8,10}$/.test(number)){window.alert('Proveri broj i pozivni +381 pre slanja.');return}
-    if(!window.confirm('Proveri da kandidat ima saglasnost da bude kontaktiran na WhatsApp-u. Otvorićemo razgovor sa spremnom porukom; ništa se ne šalje automatski.'))return;
-    const url='https://wa.me/'+number+'?text='+encodeURIComponent(registrationMessage(x.name||''));
-    window.open(url,'_blank','noopener,noreferrer');
-  };
-  const toggle=document.createElement('button');toggle.className='secondary';toggle.textContent='Evidentiraj kontakt / komentar';
-  toggle.style.marginTop='10px';
-  const edit=document.createElement('div');edit.className='panel';edit.style.display='none';
-  const choices=document.createElement('select');
-  for(const v of ['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','ODUSTAO','STOP','GREŠKA']){
-    const opt=document.createElement('option');opt.value=v;opt.textContent=v;choices.append(opt);
-  }
-  choices.value=['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','ODUSTAO','STOP','GREŠKA'].includes(x.status)?x.status:'NIJE POZVAN';
-  const channel=document.createElement('select');channel.className='contactChannel';
-  for(const v of ['','WhatsApp','Viber','Telefon','Drugo']){
-    const opt=document.createElement('option');opt.value=v;opt.textContent=v||'Izaberi kanal';channel.append(opt);
-  }
-  channel.value=x.channel||'';
-  const memo=document.createElement('textarea');memo.placeholder='Komentar (ako postoji)';memo.value=x.comment||'';
-  const save=document.createElement('button');save.textContent='Sačuvaj evidenciju';save.onclick=()=>saveCardStatus(x,edit);
-  const notice=document.createElement('div');notice.className='saveNotice note';
-  edit.append(choices,channel,memo,save,notice);
-  toggle.onclick=()=>{edit.style.display=edit.style.display==='none'?'block':'none'};
-  box.append(name,phone,date,status,wa,toggle,edit);list.append(box);
+function contactPhone(raw){
+ let digits=String(raw||'').replace(/\D/g,'');
+ if(digits.startsWith('00381')) digits=digits.slice(2);
+ if(digits.startsWith('0')&&digits.length>=9) digits='381'+digits.slice(1);
+ return /^381\d{8,10}$/.test(digits)?digits:'';
+}
+function canContact(x){
+ return !!contactPhone(x.phone) && !/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim());
+}
+function setNotice(node,msg){node.textContent=msg;node.setAttribute('role','status');}
+function copyTextToClipboard(text){
+ if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+ const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();
+ const ok=document.execCommand('copy');area.remove();return ok?Promise.resolve():Promise.reject(new Error('Kopiranje nije podržano'));
+}
+function openCandidateWhatsApp(x,notice){
+ const number=contactPhone(x.phone);
+ if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
+ const message=registrationMessage(x.name||'');
+ const link='https://wa.me/'+number+'?text='+encodeURIComponent(message);
+ setNotice(notice,'Otvoren je WhatsApp sa pripremljenom porukom. Pritisni Send. Otvaranje ne znači da je poruka poslata.');
+ window.open(link,'_blank','noopener,noreferrer');
+}
+function openCandidateViber(x,notice){
+ const number=contactPhone(x.phone);
+ if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
+ const message=registrationMessage(x.name||'');
+ // Viber does not document guaranteed draft-in-recipient-chat behavior for ordinary personal numbers.
+ // Copy the text first, then attempt opening the chat; the operator may have to paste and press Send.
+ setNotice(notice,'Pripremam tekst za Viber…');
+ copyTextToClipboard(message).then(()=>{
+   setNotice(notice,'Poruka je KOPIRANA. Ako nije već upisana u Viberu, nalepi je i pritisni Pošalji. NIJE automatski poslato.');
+   const deep='viber://chat?number='+encodeURIComponent('+'+number);
+   window.location.href=deep;
+ }).catch(()=>{
+   setNotice(notice,'Kopiranje nije uspelo. Kopiraj tekst iz šablona u odeljku Registracioni link i pošalji ga ručno u Viberu.');
+ });
+}
+function markManualContact(x,channel,notice){
+ if(!canContact(x)){setNotice(notice,'Nije dozvoljeno kontaktiranje ovog kandidata.');return}
+ if(!window.confirm('Da li si ZAISTA poslao poruku preko '+channel+'? Obeležavamo samo ručno potvrđen kontakt, ne potvrđenu isporuku.'))return;
+ setNotice(notice,'Upisujem potvrdu u privatnu evidenciju…');
+ google.script.run.withSuccessHandler(()=>{
+   setNotice(notice,'Kontakt je ručno evidentiran. Osvežavam spisak…');
+   refresh();
+ }).withFailureHandler(e=>setNotice(notice,'Greška: '+String(e.message||e)))
+ .saveCandidateStatus({id:x.id,status:'POZVAN',comment:x.comment||'',channel:channel,confirmed:true});
+}
+function makeLine(label,value,isLink,href){
+ const wrap=document.createElement('div'),caption=document.createElement('strong');
+ caption.textContent=label;wrap.append(caption);
+ const el=isLink?document.createElement('a'):document.createElement('span');
+ el.textContent=value||'Nije dostavljeno';
+ if(isLink&&href)el.href=href;
+ wrap.append(el);return wrap;
+}
+function draw(){
+ const list=document.getElementById('items');list.replaceChildren();
+ const q=document.getElementById('filter').value.trim().toLocaleLowerCase('sr');
+ const mode=document.getElementById('contactFilter').value;
+ const filtered=all.filter(x=>{
+   const state=String(x.status||'NIJE POZVAN').toUpperCase();
+   const isDone=['POZVAN','ODGOVORIO','ČEKA ODGOVOR'].includes(state);
+   const isStopped=['STOP','ODUSTAO','TEST'].includes(state);
+   if(mode==='need' && (isDone||isStopped)) return false;
+   if(mode==='contacted' && !isDone) return false;
+   if(mode==='stop' && !isStopped) return false;
+   return [x.name,x.phone,x.email,x.city,x.address,x.extraAnswer].join(' ').toLocaleLowerCase('sr').includes(q);
+ });
+ document.getElementById('listHint').textContent='Prikazano '+filtered.length+' od '+all.length+' kandidata · nove prijave se proveravaju na 30 sekundi dok je panel otvoren.';
+ if(!filtered.length){
+   const p=document.createElement('p');p.className='note';
+   p.textContent=hasLoaded?'Nema kandidata za izabrani filter.':'Učitavanje kandidata…';list.append(p);return;
  }
+ const frag=document.createDocumentFragment();
+ for(const x of filtered){
+   const box=document.createElement('article');box.className='item';
+   const head=document.createElement('div');head.className='contactHeader';
+   const label=document.createElement('div');
+   const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
+   const flag=document.createElement('span');flag.className='badge';
+   flag.textContent=(x.status==='POZVAN'?'KONTAKTIRAN':(x.status||'NIJE POZVAN'))+(x.reapplicant?' · PONOVNA PRIJAVA':'');
+   label.append(name,flag);
+   const date=document.createElement('div');date.className='contactDate';date.textContent=x.dateLabel||fmt(x.date);
+   head.append(label,date);
+   const info=document.createElement('div');info.className='contactInfo';
+   const number=contactPhone(x.phone);
+   info.append(
+     makeLine('Telefon',x.phone||'',!!number,number?'tel:+'+number:''),
+     makeLine('Grad',x.city||'',false,''),
+     makeLine('E-mail',x.email||'',!!x.email,x.email?'mailto:'+x.email:''),
+     makeLine('Adresa',x.address||'',false,'')
+   );
+   const buttons=document.createElement('div');buttons.className='contactButtons';
+   const wa=document.createElement('button');wa.className='waButton';wa.textContent='WhatsApp';wa.disabled=!canContact(x);
+   const vi=document.createElement('button');vi.className='viberButton';vi.textContent='Viber';vi.disabled=!canContact(x);
+   const notice=document.createElement('div');notice.className='contactNotice';notice.setAttribute('aria-live','polite');
+   wa.addEventListener('click',()=>openCandidateWhatsApp(x,notice));
+   vi.addEventListener('click',()=>openCandidateViber(x,notice));
+   buttons.append(wa,vi);
+   const foot=document.createElement('div');foot.className='contactFoot';
+   const sentWa=document.createElement('button');sentWa.className='markSent';sentWa.textContent='✓ Poslato WA';sentWa.disabled=!canContact(x);
+   const sentViber=document.createElement('button');sentViber.className='markSent';sentViber.textContent='✓ Poslato Viber';sentViber.disabled=!canContact(x);
+   sentWa.addEventListener('click',()=>markManualContact(x,'WhatsApp',notice));
+   sentViber.addEventListener('click',()=>markManualContact(x,'Viber',notice));
+   foot.append(sentWa,sentViber);
+   const details=document.createElement('details');
+   const summary=document.createElement('summary');summary.textContent='Detalji i promena statusa';
+   const meta=document.createElement('div');meta.className='meta';
+   meta.textContent='Datum prijave: '+(x.dateLabel||x.date||'—')+
+       (x.extraAnswer?'\nDodatni odgovor iz Meta forme: '+x.extraAnswer:'')+
+       (x.campaign?'\nKampanja: '+x.campaign:'')+
+       (x.formName?'\nForma: '+x.formName:'');
+   meta.style.whiteSpace='pre-wrap';
+   const edit=document.createElement('div');edit.className='panel';
+   const choices=document.createElement('select');choices.setAttribute('aria-label','Status kandidata');
+   for(const v of ['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','ODUSTAO','STOP','GREŠKA']){
+     const o=document.createElement('option');o.value=v;o.textContent=v;choices.append(o);
+   }
+   choices.value=[...choices.options].some(o=>o.value===x.status)?x.status:'NIJE POZVAN';
+   const channel=document.createElement('select');channel.className='contactChannel';
+   for(const value of ['','WhatsApp','Viber','Telefon','Drugo']){
+     const o=document.createElement('option');o.value=value;o.textContent=value||'Kanal kontakta';channel.append(o);
+   }
+   channel.value=x.channel||'';
+   const memo=document.createElement('textarea');memo.placeholder='Komentar (opciono)';memo.value=x.comment||'';
+   const save=document.createElement('button');save.textContent='Sačuvaj status / komentar';
+   const saveNotice=document.createElement('div');saveNotice.className='saveNotice note';
+   edit.append(choices,channel,memo,save,saveNotice);
+   save.addEventListener('click',()=>saveCardStatus(x,edit));
+   details.append(summary,meta,edit);
+   box.append(head,info,buttons,foot,notice,details);
+   frag.append(box);
+ }
+ list.append(frag);
 }
 
 let configLoaded=false;
@@ -223,7 +362,7 @@ function saveCardStatus(x,card) {
 }
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
-setInterval(()=>{if(!document.hidden)refresh()},60000);
+setInterval(()=>{if(!document.hidden)refresh()},30000);
 refresh();loadKnowledge();
 </script>
 </body>
