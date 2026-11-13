@@ -50,6 +50,14 @@ function getWoltUiHtml_() {
   }
 }
 
+function testAutoAzuriranja() {
+  const html = getWoltUiHtml_();
+  const auto = html.includes('UI auto-ažuriranje');
+  const version = (html.match(/WEB v[0-9.]+/) || ['nepoznato'])[0];
+  Logger.log('WOLT: '+version+' · '+(auto ? 'Google pristup i automatsko učitavanje rade.' : 'Rezervni prikaz: proveriti UrlFetch autorizaciju i GitHub dostupnost.'));
+  return {version:version, uiAutomatski:auto};
+}
+
 function doGet() {
   return HtmlService.createHtmlOutput(getWoltUiHtml_())
     .setTitle('Wolt Kandidati — uživo')
