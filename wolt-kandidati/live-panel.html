@@ -32,12 +32,30 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 .action{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .action button{flex:1}
 .note{color:#b4c9d6;font-size:12px;line-height:1.5}
+.registration-panel{border:1px solid #087967;background:#113b3d;margin:12px 0 14px;padding:15px;border-radius:14px}
+.registration-panel h2{font-size:17px;margin:0 0 7px;color:#ecfff9}
+.registration-panel p{font-size:13px;line-height:1.5;margin:0 0 12px;color:#c6ede9}
+.registration-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.registration-actions>*{flex:1;min-width:180px}
+.registration-open{display:flex;align-items:center;justify-content:center;background:#00c5a6;color:#052927;text-decoration:none;font-weight:800;border-radius:10px;padding:10px 14px;min-height:43px}
+.registration-panel .mini{font-size:12px;color:#b4d6d1;margin:11px 0 0}
+.registration-panel .copy-result{font-size:12px;color:#d1ffee;margin-top:8px;min-height:17px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.3.0</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.3.1</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
+<section class="registration-panel" aria-label="Registracija kandidata">
+<h2>Prvi korak: registracija kandidata</h2>
+<p>Pošalji zainteresovanom kandidatu glavni formular. Na osnovu grada i njegovih zahteva proveravamo odgovarajuću partnersku agenciju.</p>
+<div class="registration-actions">
+<a class="registration-open" href="https://docs.google.com/forms/d/e/1FAIpQLScjQwrzjCLhxMIUHDTBi0V93FaxAX7C1-9ZpV-Iew6oUbrtAA/viewform" target="_blank" rel="noopener noreferrer">Otvori formular</a>
+<button class="secondary" type="button" onclick="copyRegistrationMessage()">Kopiraj poruku sa linkom</button>
+</div>
+<p class="mini">Lične podatke, uključujući JMBG ako ga formular zahteva, kandidat unosi u formular, ne u WhatsApp razgovoru. Kopiranje poruke ne znači da je poslata.</p>
+<div id="registrationCopyResult" class="copy-result" aria-live="polite"></div>
+</section>
 <div class="stats">
  <div class="stat"><div class="num" id="total">–</div><div class="tag">Kandidati</div></div>
  <div class="stat"><div class="num" id="new">–</div><div class="tag">Nije pozvan</div></div>
@@ -65,6 +83,26 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 <footer>Bezbednost: pristup samo ovlašćenom Google nalogu. Testni kandidati su izuzeti. Nema automatskog slanja WhatsApp poruka niti upisa u originalni Excel. Automatsko osvežavanje ekrana na 60 sekundi dok je otvoren.</footer>
 </main>
 <script>
+const REGISTRATION_URL="https://docs.google.com/forms/d/e/1FAIpQLScjQwrzjCLhxMIUHDTBi0V93FaxAX7C1-9ZpV-Iew6oUbrtAA/viewform";
+function registrationMessage(name) {
+  const greeting=name?('Zdravo, '+name+'! 👋'):'Zdravo! 👋';
+  return greeting+' Hvala na interesovanju za posao Wolt dostavljača. Mi povezujemo kandidate sa partnerskim agencijama prema gradu i uslovima. Prvi korak je da popuniš ovaj formular:\n'+REGISTRATION_URL+'\nKada završiš, napiši GOTOVO. Ako imaš pitanje, slobodno pitaj.';
+}
+async function copyRegistrationMessage(name) {
+  const body=registrationMessage(name||'');
+  const out=document.getElementById('registrationCopyResult');
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(body);
+    } else {
+      const t=document.createElement('textarea');t.value=body;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();
+      const ok=document.execCommand('copy');t.remove();if(!ok)throw Error('Kopiranje nije podržano.');
+    }
+    if(out)out.textContent='Poruka kopirana. Pošalji je samo kada želiš; aplikacija nije sama slala.';
+  } catch(e) {
+    if(out)out.textContent='Kopiranje nije uspelo; otvori formular ili kopiraj tekst iz šablona ispod.';
+  }
+}
 let all=[], loading=false,hasLoaded=false;
 const fmt=v=>String(v||'');
 const txt=(id,v)=>{document.getElementById(id).textContent=v;};
