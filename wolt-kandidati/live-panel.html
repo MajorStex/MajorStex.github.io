@@ -87,10 +87,24 @@ main{padding:12px;max-width:900px}
 .advancedSection .registration-panel{margin-top:13px}
 @media(max-width:390px){.contactToolbar select{flex:1 1 100%}.contactButtons button{font-size:14px}.contactDate{white-space:normal}.contactInfo{grid-template-columns:1fr 1fr}}
 
+
+.templateEditor{margin:10px 0 13px;border:1px solid #3c6475;border-radius:14px;background:#132f41;overflow:hidden}
+.templateEditor>summary{cursor:pointer;list-style:none;display:flex;gap:9px;align-items:center;justify-content:space-between;padding:13px 15px;color:#e3f8ff;font-size:14px;font-weight:800}
+.templateEditor>summary::after{content:"Izmeni";font-size:12px;color:#0c352f;background:#06c6a8;padding:5px 9px;border-radius:8px;font-weight:800}
+.templateEditor[open]>summary::after{content:"Sakrij"}
+.templateEditorBody{padding:0 14px 14px}
+.templateEditorBody label{display:block;margin:8px 0;color:#d7ecf5;font-size:13px}
+.templateEditorBody textarea{display:block;width:100%;min-height:215px;margin:8px 0 10px;border:1px solid #4a6c7e;border-radius:10px;background:#091c2c;color:#f0f9ff;padding:12px;resize:vertical;font:14px/1.5 system-ui,Roboto,Arial,sans-serif}
+.templateEditorBody .templateActions{display:grid;grid-template-columns:1.5fr 1fr;gap:8px;margin:9px 0}
+.templateEditorBody .templateActions button{min-height:44px}
+.templateEditorBody .templateHelp{font-size:12px;color:#abccda;line-height:1.5;margin:8px 0}
+.templateEditorBody .templateHelp code{background:#234b59;border-radius:4px;padding:1px 4px;color:#d4ffef;white-space:nowrap}
+.templateEditorBody pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#081c2a;border:1px solid #35546b;border-radius:10px;padding:12px;font:13px/1.55 system-ui,Roboto,Arial,sans-serif;color:#e8f8ff;max-height:360px;overflow:auto;margin:8px 0}
+#messageTemplateStatus{min-height:20px;font-size:12px;color:#bcf8d9;margin-top:8px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.2</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.3</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -107,6 +121,24 @@ main{padding:12px;max-width:900px}
 <button type="button" class="secondary" style="flex:0 0 auto;min-height:43px" onclick="refresh()">↻ Osveži</button>
 </div>
 <div class="listHint" id="listHint">Nove Meta prijave se pojavljuju nakon sinhronizacije; automatska provera na 30 sekundi dok je panel otvoren.</div>
+
+<details class="templateEditor" id="messageEditor">
+<summary>Poruka za kandidate · WhatsApp / Viber</summary>
+<div class="templateEditorBody">
+<p class="templateHelp">Izmeni tekst koji se otvara kada pritisneš WhatsApp ili Viber. Poruka se ne šalje sama. Koristi *tekst* za podebljano u WhatsApp-u, bez emodžija koji su pravili upitnike.</p>
+<label for="messageTemplateText">Tekst poruke</label>
+<textarea id="messageTemplateText" maxlength="2500" spellcheck="true" placeholder="Upiši poruku..." oninput="previewMessageTemplate()"></textarea>
+<p class="templateHelp">Promenljive: <code>{pozdrav}</code> <code>{ime}</code> <code>{podaci}</code> <code>{grad}</code> <code>{email}</code> <code>{link}</code>. <code>{podaci}</code> automatski uključuje grad i e-mail ako ih imamo. Ako pojedinačna promenljiva nema vrednost, preskače se njen red.</p>
+<div class="templateActions">
+<button type="button" onclick="saveMessageTemplate()">Sačuvaj poruku</button>
+<button type="button" class="secondary" onclick="restoreMessageTemplate()">Vrati početnu</button>
+</div>
+<div id="messageTemplateStatus" aria-live="polite"></div>
+<p class="templateHelp"><b>Pregled poruke</b> (sa prvim kandidatom iz spiska; prikaz nije slanje):</p>
+<pre id="messageTemplatePreview"></pre>
+<p class="templateHelp">Izmene se čuvaju na ovom uređaju u pregledaču kojim otvaraš Wolt panel. Ne prenose se automatski na drugi telefon ili računar. Za zajednički šablon na svim uređajima potreban je dodatni Google serverski korak.</p>
+</div>
+</details>
 <section id="items"></section>
 <details class="advancedSection"><summary>Registracioni link i napredna podešavanja</summary>
 <section class="registration-panel" aria-label="Registracija kandidata">
@@ -140,26 +172,112 @@ main{padding:12px;max-width:900px}
 </main>
 <script>
 const REGISTRATION_URL="https://docs.google.com/forms/d/e/1FAIpQLScjQwrzjCLhxMIUHDTBi0V93FaxAX7C1-9ZpV-Iew6oUbrtAA/viewform";
-function registrationMessage(candidate) {
-  const x=(candidate && typeof candidate==='object')?candidate:{name:String(candidate||'')};
-  const name=String(x.name||'').trim();
-  const rawExtra=String(x.extraAnswer||'').trim();
-  const rawCity=String(x.city||'').trim()||(/^[a-zA-ZčćžđšČĆŽĐŠа-яА-Я\s.,-]{2,90}$/.test(rawExtra)?rawExtra:'');
-  const city=(rawCity&&!rawCity.includes('@')&&!/<test lead/i.test(rawCity))?rawCity:'';
-  const rawEmail=String(x.email||'').trim();
-  const email=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)?rawEmail:'';
-  const greeting=name?'Zdravo, '+name+'! 👋':'Zdravo! 👋';
-  const details=city&&email
-    ?'Prema tvojoj prijavi, grad u kojem želiš da radiš je '+city+', a kontakt e-mail je '+email+'.'
-    :city?'Prema tvojoj prijavi, grad u kojem želiš da radiš je '+city+'.'
-    :email?'Kao kontakt e-mail u prijavi naveo/la si '+email+'.':'';
-  return greeting+'\n\n'
-    +'Hvala na interesovanju za posao Wolt dostavljača. 😊\n'
-    +(details?details+' Ako nešto nije tačno, slobodno nam javi.\n\n':'\n')
-    +'Povezujemo kandidate sa partnerskim agencijama prema gradu i uslovima. Da bismo proverili odgovarajuću opciju, prvi korak je da popuniš formular:\n'
-    +REGISTRATION_URL+'\n\n'
-    +'Kada završiš, napiši GOTOVO. Ako imaš pitanje, slobodno pitaj.';
+
+const WOLT_TEMPLATE_KEY='wolt_registration_message_template_v1';
+const WOLT_DEFAULT_TEMPLATE=[
+  '{pozdrav}',
+  '',
+  '*Prijava za Wolt dostavljača*',
+  'Hvala na interesovanju za posao Wolt dostavljača.',
+  '',
+  '{podaci}',
+  '',
+  'Povezujemo kandidate sa odgovarajućim partnerskim agencijama prema gradu i uslovima. Da bismo proverili odgovarajuću opciju, prvi korak je da popuniš formular:',
+  '',
+  '{link}',
+  '',
+  'Kada završiš, napiši GOTOVO. Ako imaš pitanje, slobodno pitaj.'
+].join('\n');
+let woltCurrentTemplate=WOLT_DEFAULT_TEMPLATE;
+function readMessageTemplate(){
+  try{
+    const saved=localStorage.getItem(WOLT_TEMPLATE_KEY);
+    if(saved&&saved.length<=2500&&saved.includes('{link}'))return saved;
+  }catch(e){/* storage unavailable; use current session */}
+  return WOLT_DEFAULT_TEMPLATE;
 }
+function saveMessageTemplate(){
+  const input=document.getElementById('messageTemplateText');
+  const value=String(input.value||'').trim();
+  const status=document.getElementById('messageTemplateStatus');
+  if(value.length<25||value.length>2500){
+    status.textContent='Poruka mora imati između 25 i 2500 karaktera.';return;
+  }
+  if(!value.includes('{link}')){
+    status.textContent='Dodaj {link} da kandidat uvek dobije registracioni formular.';return;
+  }
+  const unknown=[...value.matchAll(/\{([^{}]+)\}/g)].map(x=>x[1])
+    .filter(k=>!['pozdrav','ime','podaci','grad','email','link'].includes(k));
+  if(unknown.length){
+    status.textContent='Nepoznata promenljiva: '+unknown[0];return;
+  }
+  try{
+    localStorage.setItem(WOLT_TEMPLATE_KEY,value);
+    woltCurrentTemplate=value;
+    status.textContent='Sačuvano na ovom uređaju. Sledeća WhatsApp/Viber poruka koristi ovaj tekst.';
+  }catch(e){
+    woltCurrentTemplate=value;
+    status.textContent='Tekst se koristi u ovoj sesiji, ali pregledač ne dozvoljava trajno čuvanje. Proveri dozvole za sajt.';
+  }
+  previewMessageTemplate();
+}
+function restoreMessageTemplate(){
+  if(!window.confirm('Vrati početni tekst poruke na ovom uređaju?'))return;
+  try{localStorage.removeItem(WOLT_TEMPLATE_KEY)}catch(e){}
+  woltCurrentTemplate=WOLT_DEFAULT_TEMPLATE;
+  document.getElementById('messageTemplateText').value=WOLT_DEFAULT_TEMPLATE;
+  document.getElementById('messageTemplateStatus').textContent='Vraćena početna poruka.';
+  previewMessageTemplate();
+}
+function initMessageTemplate(){
+  woltCurrentTemplate=readMessageTemplate();
+  document.getElementById('messageTemplateText').value=woltCurrentTemplate;
+  previewMessageTemplate();
+}
+function candidateCity(x){
+  const rawCity=String(x.city||'').trim();
+  const extra=String(x.extraAnswer||'').trim();
+  const city=rawCity || (/^[a-zA-ZčćžđšČĆŽĐŠа-яА-Я\s.,-]{2,90}$/.test(extra)?extra:'');
+  if(!city||city.includes('@')||/<test lead/i.test(city))return '';
+  return city;
+}
+function candidateEmail(x){
+  const email=String(x.email||'').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?email:'';
+}
+function registrationMessage(candidate,template){
+  const x=(candidate&&typeof candidate==='object')?candidate:{name:String(candidate||'')};
+  const name=String(x.name||'').trim();
+  const city=candidateCity(x);
+  const email=candidateEmail(x);
+  const details=[];
+  if(city)details.push('Grad prijave: '+city);
+  if(email)details.push('Kontakt e-mail: '+email);
+  const data={
+    pozdrav:name?'Zdravo, '+name+'!':'Zdravo!',
+    ime:name,
+    podaci:details.length?('Prema tvojoj prijavi:\n'+details.map(x=>'- '+x).join('\n')+'\nAko neki podatak nije tačan, slobodno nam javi.'):'',
+    grad:city,
+    email:email,
+    link:REGISTRATION_URL
+  };
+  const pattern=/\{(pozdrav|ime|podaci|grad|email|link)\}/g;
+  const text=String(template??woltCurrentTemplate);
+  const replaced=text.split('\n').map(line=>{
+    const variables=[...line.matchAll(pattern)].map(m=>m[1]);
+    if(variables.some(v=>!data[v]))return '';
+    return line.replace(pattern,(_,key)=>data[key]||'');
+  }).join('\n');
+  return replaced.replace(/\n{3,}/g,'\n\n').trim();
+}
+function previewMessageTemplate(){
+  const el=document.getElementById('messageTemplatePreview');
+  const input=document.getElementById('messageTemplateText');
+  if(!el||!input)return;
+  const example=all.length?all[0]:{name:'Primer Kandidata',city:'Beograd',email:'kandidat@example.com'};
+  el.textContent=registrationMessage(example,input.value||WOLT_DEFAULT_TEMPLATE);
+}
+
 async function copyRegistrationMessage(name) {
   const body=registrationMessage(name||'');
   const out=document.getElementById('registrationCopyResult');
@@ -187,7 +305,7 @@ function refresh(){
   txt('total',data.stats.total);txt('new',data.stats.new);
   txt('contacted',data.stats.contacted);
   txt('status','Povezano · provereno '+new Date().toLocaleTimeString('sr-RS')+' · test '+data.stats.test+' izuzet');
-  document.getElementById('status').className='status';draw();
+  document.getElementById('status').className='status';draw();previewMessageTemplate();
  }).withFailureHandler(e=>{
   loading=false;txt('status','Greška u povezivanju: '+fmt(e.message||e));
   document.getElementById('status').className='status error';
@@ -420,7 +538,7 @@ function saveCardStatus(x,card) {
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 setInterval(()=>{if(!document.hidden)refresh()},30000);
-refresh();loadKnowledge();
+initMessageTemplate();refresh();loadKnowledge();
 </script>
 </body>
 </html>
