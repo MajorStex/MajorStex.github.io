@@ -104,7 +104,7 @@ main{padding:12px;max-width:900px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.4</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.5</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -127,7 +127,7 @@ main{padding:12px;max-width:900px}
 <div class="templateEditorBody">
 <p class="templateHelp">Izmeni tekst koji se otvara kada pritisneš WhatsApp ili Viber. Poruka se ne šalje sama. Koristi *tekst* za podebljano u WhatsApp-u, bez emodžija koji su pravili upitnike.</p>
 <label for="messageTemplateText">Tekst poruke</label>
-<textarea id="messageTemplateText" maxlength="2500" spellcheck="true" placeholder="Upiši poruku..." oninput="previewMessageTemplate()"></textarea>
+<textarea id="messageTemplateText" maxlength="1500" spellcheck="true" placeholder="Upiši poruku..." oninput="markTemplateDirty();previewMessageTemplate()"></textarea>
 <p class="templateHelp">Promenljive: <code>{pozdrav}</code> <code>{ime}</code> <code>{podaci}</code> <code>{grad}</code> <code>{email}</code> <code>{link}</code>. <code>{podaci}</code> automatski uključuje grad i e-mail ako ih imamo. Ako pojedinačna promenljiva nema vrednost, preskače se njen red.</p>
 <div class="templateActions">
 <button type="button" onclick="saveMessageTemplate()">Sačuvaj poruku</button>
@@ -136,7 +136,7 @@ main{padding:12px;max-width:900px}
 <div id="messageTemplateStatus" aria-live="polite"></div>
 <p class="templateHelp"><b>Pregled poruke</b> (sa prvim kandidatom iz spiska; prikaz nije slanje):</p>
 <pre id="messageTemplatePreview"></pre>
-<p class="templateHelp">Izmene se čuvaju na ovom uređaju u pregledaču kojim otvaraš Wolt panel. Ne prenose se automatski na drugi telefon ili računar. Za zajednički šablon na svim uređajima potreban je dodatni Google serverski korak.</p>
+<p class="templateHelp">Posle čuvanja tekst se automatski sinhronizuje u privatnoj Google tabeli, da ga koriste i telefon i računar. Uređaj čuva rezervnu lokalnu kopiju. Nijedna poruka se ne šalje bez tvog klika.</p>
 </div>
 </details>
 <section id="items"></section>
@@ -189,6 +189,9 @@ const WOLT_DEFAULT_TEMPLATE=[
   'Kada završiš, napiši GOTOVO. Ako imaš pitanje, slobodno pitaj.'
 ].join('\n');
 let woltCurrentTemplate=WOLT_DEFAULT_TEMPLATE;
+let templateDirty=false;
+let templateSaveInFlight=false;
+function markTemplateDirty(){templateDirty=true;}
 function readMessageTemplate(){
   try{
     const saved=localStorage.getItem(WOLT_TEMPLATE_KEY);
@@ -200,8 +203,8 @@ function saveMessageTemplate(){
   const input=document.getElementById('messageTemplateText');
   const value=String(input.value||'').trim();
   const status=document.getElementById('messageTemplateStatus');
-  if(value.length<25||value.length>2500){
-    status.textContent='Poruka mora imati između 25 i 2500 karaktera.';return;
+  if(value.length<25||value.length>1500){
+    status.textContent='Poruka mora imati između 25 i 1500 karaktera.';return;
   }
   if(!value.includes('{link}')){
     status.textContent='Dodaj {link} da kandidat uvek dobije registracioni formular.';return;
@@ -211,23 +214,30 @@ function saveMessageTemplate(){
   if(unknown.length){
     status.textContent='Nepoznata promenljiva: '+unknown[0];return;
   }
-  try{
-    localStorage.setItem(WOLT_TEMPLATE_KEY,value);
-    woltCurrentTemplate=value;
-    status.textContent='Sačuvano na ovom uređaju. Sledeća WhatsApp/Viber poruka koristi ovaj tekst.';
-  }catch(e){
-    woltCurrentTemplate=value;
-    status.textContent='Tekst se koristi u ovoj sesiji, ali pregledač ne dozvoljava trajno čuvanje. Proveri dozvole za sajt.';
-  }
+  woltCurrentTemplate=value;
+  templateDirty=false;
+  try{localStorage.setItem(WOLT_TEMPLATE_KEY,value)}catch(e){}
+  status.textContent='Tekst je spreman za sledeću WhatsApp/Viber poruku. Sinhronizujem na Google...';
+  templateSaveInFlight=true;
+  google.script.run.withSuccessHandler(()=>{
+    templateSaveInFlight=false;
+    status.textContent='SAČUVANO NA GOOGLE. Poruka je zajednička za telefon i računar.';
+    loadKnowledge();
+  }).withFailureHandler(e=>{
+    templateSaveInFlight=false;
+    status.textContent='Sačuvano lokalno. Google sinhronizacija nije uspela: '+String(e.message||e)+'. Ponovi Sačuvaj poruku.';
+  }).addLearnedAnswer({
+    question:'WOLT_TEMPLATE_MESSAGE_V1',
+    keywords:'__WOLT_TEMPLATE_SYSTEM__',
+    answer:value
+  });
   previewMessageTemplate();
 }
 function restoreMessageTemplate(){
   if(!window.confirm('Vrati početni tekst poruke na ovom uređaju?'))return;
-  try{localStorage.removeItem(WOLT_TEMPLATE_KEY)}catch(e){}
-  woltCurrentTemplate=WOLT_DEFAULT_TEMPLATE;
   document.getElementById('messageTemplateText').value=WOLT_DEFAULT_TEMPLATE;
-  document.getElementById('messageTemplateStatus').textContent='Vraćena početna poruka.';
-  previewMessageTemplate();
+  markTemplateDirty();
+  saveMessageTemplate();
 }
 function initMessageTemplate(){
   woltCurrentTemplate=readMessageTemplate();
@@ -518,6 +528,18 @@ function loadKnowledge() {
   const locationMsg=(data.messages||[]).find(m=>m.id==='META_CITY_BRIDGE_V1');
   cityBridge=parseCityBridge(locationMsg&&locationMsg.text);
   applyCityBridge();
+  const templateEntries=(data.answers||[]).filter(a=>a.question==='WOLT_TEMPLATE_MESSAGE_V1'&&
+    String(a.keywords||'').includes('__WOLT_TEMPLATE_SYSTEM__'));
+  const latest=templateEntries.length?String(templateEntries[templateEntries.length-1].answer||''):'';
+  if(latest && latest.length<=1500 && latest.includes('{link}') && !templateDirty && !templateSaveInFlight){
+    woltCurrentTemplate=latest;
+    const input=document.getElementById('messageTemplateText');
+    if(input)input.value=latest;
+    try{localStorage.setItem(WOLT_TEMPLATE_KEY,latest)}catch(e){}
+    const note=document.getElementById('messageTemplateStatus');
+    if(note && !note.textContent.includes('Sinhronizacija nije uspela'))
+      note.textContent='Učitan zajednički tekst iz Google evidencije.';
+  }
   if(hasLoaded){draw();previewMessageTemplate();}
   const list=document.getElementById('msgTemplates');
   list.replaceChildren();
@@ -531,7 +553,7 @@ function loadKnowledge() {
   const learned=document.getElementById('learned');
   learned.replaceChildren();
   const title=document.createElement('p');
-  title.textContent='Pitanja u bazi: '+(data.answers||[]).length;
+  title.textContent='Pitanja u bazi: '+(data.answers||[]).filter(a=>a.question!=='WOLT_TEMPLATE_MESSAGE_V1').length;
   learned.append(title);
  }).withFailureHandler(e=>{document.getElementById('msgTemplates').textContent='Greška: '+String(e.message||e)}).getAutomationSetup();
 }
