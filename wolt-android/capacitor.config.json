@@ -1,6 +1,6 @@
 {
-  "appId": "com.majorstex.woltkandidati",
-  "appName": "Wolt Kandidati",
+  "appId": "com.majorstex.woltkandidatiauto",
+  "appName": "Wolt Kandidati AUTO",
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
