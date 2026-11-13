@@ -5,7 +5,7 @@
  * Never set Anyone; this project holds candidates' personal data.
  * Does NOT send WhatsApp messages or update the original Excel file.
  */
-const WOLT_WEB_VERSION = '1.3.0';
+const WOLT_WEB_VERSION = '1.4.0';
 const WOLT_SHEET_ID = '1vpTbCSxkNtHtJNbJ_hlM-wPuK1N52h2j0v2OQFk06x8';
 const SOURCE_TAB = 'META_ULAZ';
 const STATUS_TAB = 'STATUSI';
@@ -84,7 +84,11 @@ function getOverview() {
   const iName = idx(['full name','full_name','ime i prezime'],13);
   const iPhone = idx(['phone','phone_number','telefon'],14);
   const iEmail = idx(['email','e-mail'],15);
-  const iCity = idx(['city','grad','mesto'],-1);
+
+  const iCity = idx(['city','grad','mesto','town','city/town'],-1);
+  const iAddress = idx(['adresa','address','street address','full address','street_address'],-1);
+  // In the current Meta Instant Form, the city is commonly submitted in custom answer column M.
+  const iExtra = header.findIndex(h=>h.includes('ostavite nam vaš broj mobilnog telefona'));
   const iStatus = idx(['lead_status'],17);
   const stateMap=new Map();
   if (states.getLastRow()>1) {
@@ -116,15 +120,27 @@ function getOverview() {
     // A fresh Meta form submission is a new expression of interest even if the phone exists in the old Excel.
     // Prior contact is recorded as context, not an automatic block. Respect any explicit STOP / opt-out.
     const isReapplicant=archived.has(normalized);
+
     const status=state.status||'NIJE POZVAN';
+    const extra=iExtra>=0?String(row[iExtra]||'').trim().slice(0,180):'';
+    const emailFromExtra=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(extra)?extra:'';
+    const cityFromExtra=/^[a-zA-ZčćžđšČĆŽĐŠа-яА-Я\s.,-]{2,90}$/.test(extra) && !/<test lead/i.test(extra)?extra:'';
+    const resolvedCity=iCity>=0?String(row[iCity]||'').trim():cityFromExtra;
+    const resolvedEmail=String(row[iEmail]||'').trim()||emailFromExtra;
+    const resolvedAddress=iAddress>=0?String(row[iAddress]||'').trim():'';
     if(status==='POZVAN')contacted++; else if(status==='NIJE POZVAN')needsContact++;
     candidates.push({
       id, date:String(row[iDate]||''),
       dateLabel: isNaN(Date.parse(row[iDate])) ? String(row[iDate]||'') : Utilities.formatDate(new Date(row[iDate]),'Europe/Belgrade','dd.MM.yyyy HH:mm'),
       name:String(row[iName]||'').slice(0,140),
       phone:phone.replace(/^p:/i,'').trim().slice(0,50),
-      city:iCity>=0?String(row[iCity]||'').slice(0,100):'',
-      email:String(row[iEmail]||'').slice(0,140),
+
+      city:resolvedCity.slice(0,100),
+      email:resolvedEmail.slice(0,140),
+      address:resolvedAddress.slice(0,160),
+      extraAnswer:extra,
+      campaign:String(row[7]||'').slice(0,140),
+      formName:String(row[9]||'').slice(0,140),
       status, reapplicant:isReapplicant, comment:(state.comment||'').slice(0,180),
       channel:state.channel||'', leadStatus:String(row[iStatus]||'')
     });
