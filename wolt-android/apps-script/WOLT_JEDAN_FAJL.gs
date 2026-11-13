@@ -5,7 +5,7 @@
  * Never set Anyone; this project holds candidates' personal data.
  * Does NOT send WhatsApp messages or update the original Excel file.
  */
-const WOLT_WEB_VERSION = '1.2.0';
+const WOLT_WEB_VERSION = '1.3.0';
 const WOLT_SHEET_ID = '1vpTbCSxkNtHtJNbJ_hlM-wPuK1N52h2j0v2OQFk06x8';
 const SOURCE_TAB = 'META_ULAZ';
 const STATUS_TAB = 'STATUSI';
@@ -20,8 +20,38 @@ function normalizePhone_(raw) {
   return digits;
 }
 
+/* One-time deployed Apps Script backend. The UI comes from an owner-controlled
+ * GitHub repository. Only UI code is fetched; candidate data stays in private
+ * Google Sheets and is returned only through authorized google.script.run calls.
+ * Backend changes still require a versioned deployment update.
+ */
+const WOLT_UI_SOURCE = 'https://raw.githubusercontent.com/MajorStex/MajorStex.github.io/main/wolt-kandidati/live-panel.html';
+function getWoltUiHtml_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('wolt_live_ui_v1');
+  if(cached && cached.includes('data-wolt-app="candidate-dashboard"')) return cached;
+  try {
+    const result = UrlFetchApp.fetch(WOLT_UI_SOURCE + '?minute=' + Math.floor(Date.now() / 60000), {
+      followRedirects:true,
+      muteHttpExceptions:true,
+      headers:{'Accept':'text/html'}
+    });
+    if(result.getResponseCode() !== 200) throw new Error('UI HTTP '+result.getResponseCode());
+    const html = result.getContentText('UTF-8');
+    if(html.length > 120000 || !html.includes('data-wolt-app="candidate-dashboard"') ||
+       !html.includes('google.script.run') || !html.includes('id="items"')) {
+      throw new Error('Nepoznat ili neispravan UI.');
+    }
+    cache.put('wolt_live_ui_v1', html, 60);
+    return html;
+  } catch(e) {
+    console.log('Live UI nije trenutno dostupan, koristim rezervni HTML: '+String(e));
+    return WOLT_INDEX_HTML;
+  }
+}
+
 function doGet() {
-  return HtmlService.createHtmlOutput(WOLT_INDEX_HTML)
+  return HtmlService.createHtmlOutput(getWoltUiHtml_())
     .setTitle('Wolt Kandidati — uživo')
     .addMetaTag('viewport','width=device-width, initial-scale=1, viewport-fit=cover');
 }
@@ -206,7 +236,7 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.2.0</strong><span>13.11.2026.</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.3.0</strong><span>rezervni prikaz</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 <div class="stats">
