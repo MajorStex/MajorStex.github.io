@@ -86,7 +86,7 @@ main{padding:12px;max-width:900px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.0</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.1</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -214,10 +214,11 @@ function openCandidateViber(x,notice){
 }
 function markManualContact(x,channel,notice){
  if(!canContact(x)){setNotice(notice,'Nije dozvoljeno kontaktiranje ovog kandidata.');return}
- if(!window.confirm('Da li si ZAISTA poslao poruku preko '+channel+'? Obeležavamo samo ručno potvrđen kontakt, ne potvrđenu isporuku.'))return;
+ if(!window.confirm('Da li si ZAISTA poslao poruku preko '+channel+'? Sačuvaćemo datum i vreme tvoje potvrde. Ovo nije potvrda isporuke od WhatsApp/Viber-a.'))return;
  setNotice(notice,'Upisujem potvrdu u privatnu evidenciju…');
- google.script.run.withSuccessHandler(()=>{
-   setNotice(notice,'Kontakt je ručno evidentiran. Osvežavam spisak…');
+ google.script.run.withSuccessHandler(result=>{
+   const time=result&&result.sentAt?result.sentAt:'(datum će biti dostupan nakon osvežavanja)';
+   setNotice(notice,'POSLATO · '+channel+' · '+time+' — ručno potvrđeno. Osvežavam spisak…');
    refresh();
  }).withFailureHandler(e=>setNotice(notice,'Greška: '+String(e.message||e)))
  .saveCandidateStatus({id:x.id,status:'POZVAN',comment:x.comment||'',channel:channel,confirmed:true});
@@ -255,9 +256,12 @@ function draw(){
    const label=document.createElement('div');
    const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
    const flag=document.createElement('span');flag.className='badge';
-   flag.textContent=(x.status==='POZVAN'?'KONTAKTIRAN':(x.status||'NIJE POZVAN'))+(x.reapplicant?' · PONOVNA PRIJAVA':'');
+   const hasSend=!!x.sentAt && /^(WhatsApp|Viber)$/i.test(String(x.sentChannel||x.channel||''));
+   flag.textContent=(hasSend?'POSLATO · '+(x.sentChannel||x.channel):
+     (x.status==='POZVAN'?'KONTAKTIRAN':(x.status||'NIJE POZVAN')))+
+     (x.reapplicant?' · PONOVNA PRIJAVA':'');
    label.append(name,flag);
-   const date=document.createElement('div');date.className='contactDate';date.textContent=x.dateLabel||fmt(x.date);
+   const date=document.createElement('div');date.className='contactDate';date.textContent='Lead: '+(x.dateLabel||fmt(x.date)||'Datum nije dostupan');
    head.append(label,date);
    const info=document.createElement('div');info.className='contactInfo';
    const number=contactPhone(x.phone);
@@ -265,7 +269,9 @@ function draw(){
      makeLine('Telefon',x.phone||'',!!number,number?'tel:+'+number:''),
      makeLine('Grad',x.city||'',false,''),
      makeLine('E-mail',x.email||'',!!x.email,x.email?'mailto:'+x.email:''),
-     makeLine('Adresa',x.address||'',false,'')
+     makeLine('Adresa',x.address||'',false,''),
+     makeLine('Datum prijave',x.dateLabel||x.date||'Nije dostavljen',false,''),
+     makeLine('Ručna potvrda slanja',x.sentAt ? (x.sentAt+' · '+(x.sentChannel||x.channel||'kanal nije naveden')) : 'Nije evidentirano',false,'')
    );
    const buttons=document.createElement('div');buttons.className='contactButtons';
    const wa=document.createElement('button');wa.className='waButton';wa.textContent='WhatsApp';wa.disabled=!canContact(x);
@@ -275,8 +281,8 @@ function draw(){
    vi.addEventListener('click',()=>openCandidateViber(x,notice));
    buttons.append(wa,vi);
    const foot=document.createElement('div');foot.className='contactFoot';
-   const sentWa=document.createElement('button');sentWa.className='markSent';sentWa.textContent='✓ Poslato WA';sentWa.disabled=!canContact(x);
-   const sentViber=document.createElement('button');sentViber.className='markSent';sentViber.textContent='✓ Poslato Viber';sentViber.disabled=!canContact(x);
+   const sentWa=document.createElement('button');sentWa.className='markSent';sentWa.textContent='✓ Potvrdi slanje WA';sentWa.disabled=!canContact(x);
+   const sentViber=document.createElement('button');sentViber.className='markSent';sentViber.textContent='✓ Potvrdi slanje Viber';sentViber.disabled=!canContact(x);
    sentWa.addEventListener('click',()=>markManualContact(x,'WhatsApp',notice));
    sentViber.addEventListener('click',()=>markManualContact(x,'Viber',notice));
    foot.append(sentWa,sentViber);
