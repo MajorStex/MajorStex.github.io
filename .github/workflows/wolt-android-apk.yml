@@ -3,7 +3,6 @@ on:
   push:
     branches: [main]
     paths:
-      - 'wolt-kandidati/**'
       - 'wolt-android/**'
       - '.github/workflows/wolt-android-apk.yml'
   workflow_dispatch:
