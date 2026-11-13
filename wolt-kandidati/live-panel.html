@@ -20,6 +20,9 @@ input{border:1px solid #406174;background:#102438;color:#fff;padding:12px;width:
 .item{background:#122a3c;border:1px solid #2b4a5d;border-radius:13px;padding:13px;margin:8px 0}
 .name{font-weight:750;font-size:16px}.meta{font-size:12px;color:#9fbece;margin-top:5px;word-break:break-word}
 .badge{display:inline-block;border-radius:10px;background:#184a45;color:#b2f4df;padding:4px 7px;margin-top:7px;font-size:11px}
+.badge.pending{background:#692127;color:#ffd7dc;border:1px solid #ad414d;font-weight:800}
+.badge.sent{background:#176044;color:#d5ffe5;border:1px solid #2a9566;font-weight:800}
+.badge.optout{background:#6b3434;color:#ffe1e1;border:1px solid #a65757}
 .error{background:#59262b;color:#ffdddd}
 footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 
@@ -86,7 +89,7 @@ main{padding:12px;max-width:900px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.1</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.2</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -136,9 +139,25 @@ main{padding:12px;max-width:900px}
 </main>
 <script>
 const REGISTRATION_URL="https://docs.google.com/forms/d/e/1FAIpQLScjQwrzjCLhxMIUHDTBi0V93FaxAX7C1-9ZpV-Iew6oUbrtAA/viewform";
-function registrationMessage(name) {
-  const greeting=name?('Zdravo, '+name+'! 👋'):'Zdravo! 👋';
-  return greeting+' Hvala na interesovanju za posao Wolt dostavljača. Mi povezujemo kandidate sa partnerskim agencijama prema gradu i uslovima. Prvi korak je da popuniš ovaj formular:\n'+REGISTRATION_URL+'\nKada završiš, napiši GOTOVO. Ako imaš pitanje, slobodno pitaj.';
+function registrationMessage(candidate) {
+  const x=(candidate && typeof candidate==='object')?candidate:{name:String(candidate||'')};
+  const name=String(x.name||'').trim();
+  const rawExtra=String(x.extraAnswer||'').trim();
+  const rawCity=String(x.city||'').trim()||(/^[a-zA-ZčćžđšČĆŽĐŠа-яА-Я\s.,-]{2,90}$/.test(rawExtra)?rawExtra:'');
+  const city=(rawCity&&!rawCity.includes('@')&&!/<test lead/i.test(rawCity))?rawCity:'';
+  const rawEmail=String(x.email||'').trim();
+  const email=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)?rawEmail:'';
+  const greeting=name?'Zdravo, '+name+'! 👋':'Zdravo! 👋';
+  const details=city&&email
+    ?'Prema tvojoj prijavi, grad u kojem želiš da radiš je '+city+', a kontakt e-mail je '+email+'.'
+    :city?'Prema tvojoj prijavi, grad u kojem želiš da radiš je '+city+'.'
+    :email?'Kao kontakt e-mail u prijavi naveo/la si '+email+'.':'';
+  return greeting+'\n\n'
+    +'Hvala na interesovanju za posao Wolt dostavljača. 😊\n'
+    +(details?details+' Ako nešto nije tačno, slobodno nam javi.\n\n':'\n')
+    +'Povezujemo kandidate sa partnerskim agencijama prema gradu i uslovima. Da bismo proverili odgovarajuću opciju, prvi korak je da popuniš formular:\n'
+    +REGISTRATION_URL+'\n\n'
+    +'Kada završiš, napiši GOTOVO. Ako imaš pitanje, slobodno pitaj.';
 }
 async function copyRegistrationMessage(name) {
   const body=registrationMessage(name||'');
@@ -213,7 +232,7 @@ function openCandidateWhatsApp(x,notice){
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
  const sent=existingSent(x);
  if(sent && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+sent.date+'. Da li želiš da otvoriš WhatsApp ponovo?'))return;
- const message=registrationMessage(x.name||'');
+ const message=registrationMessage(x);
  const link='https://wa.me/'+number+'?text='+encodeURIComponent(message);
  setNotice(notice,'Otvoren je WhatsApp sa pripremljenom porukom. Pritisni Send. Otvaranje ne znači da je poruka poslata.');
  window.open(link,'_blank','noopener,noreferrer');
@@ -223,7 +242,7 @@ function openCandidateViber(x,notice){
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
  const sent=existingSent(x);
  if(sent && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+sent.date+'. Da li želiš da otvoriš Viber ponovo?'))return;
- const message=registrationMessage(x.name||'');
+ const message=registrationMessage(x);
  // Viber does not document guaranteed draft-in-recipient-chat behavior for ordinary personal numbers.
  // Copy the text first, then attempt opening the chat; the operator may have to paste and press Send.
  setNotice(notice,'Pripremam tekst za Viber…');
@@ -285,6 +304,10 @@ function draw(){
    flag.textContent=((x.status==='POZVAN'&&hasSend)?'POSLATO · '+sent.channel:
      (x.status==='POZVAN'?'KONTAKTIRAN':(x.status||'NIJE POZVAN')))+
      (x.reapplicant?' · PONOVNA PRIJAVA':'');
+   const statusUpper=String(x.status||'NIJE POZVAN').trim().toUpperCase();
+   if(statusUpper==='NIJE POZVAN')flag.classList.add('pending');
+   else if(statusUpper==='STOP'||statusUpper==='ODUSTAO')flag.classList.add('optout');
+   else if(hasSend&&statusUpper==='POZVAN')flag.classList.add('sent');
    label.append(name,flag);
    const date=document.createElement('div');date.className='contactDate';date.textContent='Lead: '+(x.dateLabel||fmt(x.date)||'Datum nije dostupan');
    head.append(label,date);
