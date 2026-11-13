@@ -139,12 +139,12 @@ function draw(){
   wa.style.marginTop='10px';
   wa.style.marginRight='8px';
   wa.style.background='#186b58';
-  const blocked=/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim()) || !/^\\+?[0-9 ()-]{9,}$/.test(String(x.phone||''));
+  const blocked=/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim()) || !(/^\+?[0-9 ()-]{9,}$/.test(String(x.phone||'')));
   wa.textContent=blocked ? 'WhatsApp kontakt blokiran / bez broja' : 'Prva WhatsApp poruka (ručno)';
   wa.disabled=blocked;
   if(blocked)wa.style.opacity='.5';
   wa.onclick=()=>{
-    const number=String(x.phone||'').replace(/\\D/g,'');
+    const number=String(x.phone||'').replace(/\D/g,'');
     if(!/^381[0-9]{8,10}$/.test(number)){window.alert('Proveri broj i pozivni +381 pre slanja.');return}
     if(!window.confirm('Proveri da kandidat ima saglasnost da bude kontaktiran na WhatsApp-u. Otvorićemo razgovor sa spremnom porukom; ništa se ne šalje automatski.'))return;
     const url='https://wa.me/'+number+'?text='+encodeURIComponent(registrationMessage(x.name||''));
