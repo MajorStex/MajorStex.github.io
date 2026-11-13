@@ -192,6 +192,7 @@ function copyTextToClipboard(text){
 function openCandidateWhatsApp(x,notice){
  const number=contactPhone(x.phone);
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
+ if(x.sentAt && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+x.sentAt+'. Da li želiš da otvoriš WhatsApp ponovo?'))return;
  const message=registrationMessage(x.name||'');
  const link='https://wa.me/'+number+'?text='+encodeURIComponent(message);
  setNotice(notice,'Otvoren je WhatsApp sa pripremljenom porukom. Pritisni Send. Otvaranje ne znači da je poruka poslata.');
@@ -200,6 +201,7 @@ function openCandidateWhatsApp(x,notice){
 function openCandidateViber(x,notice){
  const number=contactPhone(x.phone);
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
+ if(x.sentAt && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+x.sentAt+'. Da li želiš da otvoriš Viber ponovo?'))return;
  const message=registrationMessage(x.name||'');
  // Viber does not document guaranteed draft-in-recipient-chat behavior for ordinary personal numbers.
  // Copy the text first, then attempt opening the chat; the operator may have to paste and press Send.
@@ -257,7 +259,7 @@ function draw(){
    const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
    const flag=document.createElement('span');flag.className='badge';
    const hasSend=!!x.sentAt && /^(WhatsApp|Viber)$/i.test(String(x.sentChannel||x.channel||''));
-   flag.textContent=(hasSend?'POSLATO · '+(x.sentChannel||x.channel):
+   flag.textContent=((x.status==='POZVAN'&&hasSend)?'POSLATO · '+(x.sentChannel||x.channel):
      (x.status==='POZVAN'?'KONTAKTIRAN':(x.status||'NIJE POZVAN')))+
      (x.reapplicant?' · PONOVNA PRIJAVA':'');
    label.append(name,flag);
