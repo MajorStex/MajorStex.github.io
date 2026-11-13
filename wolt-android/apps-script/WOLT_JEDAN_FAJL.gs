@@ -8,8 +8,16 @@
 const WOLT_SHEET_ID = '1vpTbCSxkNtHtJNbJ_hlM-wPuK1N52h2j0v2OQFk06x8';
 const SOURCE_TAB = 'META_ULAZ';
 const STATUS_TAB = 'STATUSI';
+const ARCHIVE_TAB = 'ARHIVA_BROJEVA';
 const BLOCKED_TEST_IDS = new Set(['l:2327196261413284']);
 const MAX_ROWS = 2000;
+
+function normalizePhone_(raw) {
+  let digits=String(raw||'').replace(/\D/g,'');
+  if(digits.startsWith('00381'))digits=digits.slice(2);
+  if(digits.startsWith('0')&&digits.length>=9)digits='381'+digits.slice(1);
+  return digits;
+}
 
 function doGet() {
   return HtmlService.createHtmlOutput(WOLT_INDEX_HTML)
@@ -45,6 +53,13 @@ function getOverview() {
     const sv=states.getRange(statusStart,1,states.getLastRow()-statusStart+1,6).getDisplayValues();
     sv.forEach(r=>{if(r[0])stateMap.set(r[0],{status:r[1]||'',comment:r[2]||'',channel:r[3]||'',confirmedAt:r[4]||''});});
   }
+  const archiveSheet = book.getSheetByName(ARCHIVE_TAB);
+  // The archived phone list comes from the original Excel. That original file is never modified.
+  const archived = new Set();
+  if(archiveSheet && archiveSheet.getLastRow()>1) {
+    archiveSheet.getRange(2,1,archiveSheet.getLastRow()-1,1).getDisplayValues()
+      .forEach(r=>{const n=normalizePhone_(r[0]);if(n)archived.add(n)});
+  }
   const dedup = new Set();
   const candidates=[];
   let tests=0, old=0, contacted=0, needsContact=0;
@@ -53,18 +68,19 @@ function getOverview() {
     const id=String(row[iId]||'').trim();
     const phone=String(row[iPhone]||'').trim();
     if(!id || !phone) continue;
-    const normalized=phone.replace(/[^\d+]/g,'');
+    const normalized=normalizePhone_(phone);
     const state=stateMap.get(id)||{};
     const test=BLOCKED_TEST_IDS.has(id) || /<test lead/i.test(row[iName]||'') || /<test lead/i.test(phone) || state.status==='TEST';
     if(test){tests++;continue;}
     if(dedup.has(normalized)){old++;continue;}
     dedup.add(normalized);
-    const status=state.status||'NIJE POZVAN';
+    const status=archived.has(normalized) ? 'STARI — NE SLATI' : (state.status||'NIJE POZVAN');
     if(status==='POZVAN')contacted++; else if(status==='NIJE POZVAN')needsContact++;
     candidates.push({
       id, date:String(row[iDate]||''),
+      dateLabel: isNaN(Date.parse(row[iDate])) ? String(row[iDate]||'') : Utilities.formatDate(new Date(row[iDate]),'Europe/Belgrade','dd.MM.yyyy HH:mm'),
       name:String(row[iName]||'').slice(0,140),
-      phone:phone.slice(0,50),
+      phone:phone.replace(/^p:/i,'').trim().slice(0,50),
       city:iCity>=0?String(row[iCity]||'').slice(0,100):'',
       email:String(row[iEmail]||'').slice(0,140),
       status, comment:(state.comment||'').slice(0,180),
@@ -150,7 +166,7 @@ function draw(){
   const box=document.createElement('article');box.className='item';
   const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
   const phone=document.createElement('div');phone.className='meta';phone.textContent=x.phone;
-  const date=document.createElement('div');date.className='meta';date.textContent=fmt(x.date)+(x.city?' · '+x.city:'');
+  const date=document.createElement('div');date.className='meta';date.textContent=fmt(x.dateLabel||x.date)+(x.city?' · '+x.city:'');
   const status=document.createElement('span');status.className='badge';status.textContent=x.status;
   box.append(name,phone,date,status);list.append(box);
  }
