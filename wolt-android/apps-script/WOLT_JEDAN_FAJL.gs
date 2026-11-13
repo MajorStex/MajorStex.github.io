@@ -5,7 +5,7 @@
  * Never set Anyone; this project holds candidates' personal data.
  * Does NOT send WhatsApp messages or update the original Excel file.
  */
-const WOLT_WEB_VERSION = '1.4.0';
+const WOLT_WEB_VERSION = '1.4.1';
 const WOLT_SHEET_ID = '1vpTbCSxkNtHtJNbJ_hlM-wPuK1N52h2j0v2OQFk06x8';
 const SOURCE_TAB = 'META_ULAZ';
 const STATUS_TAB = 'STATUSI';
@@ -142,7 +142,7 @@ function getOverview() {
       campaign:String(row[7]||'').slice(0,140),
       formName:String(row[9]||'').slice(0,140),
       status, reapplicant:isReapplicant, comment:(state.comment||'').slice(0,180),
-      channel:state.channel||'', leadStatus:String(row[iStatus]||'')
+      channel:state.channel||'', sentChannel:state.confirmedAt ? (state.channel||'') : '', sentAt:String(state.confirmedAt||''), leadStatus:String(row[iStatus]||'')
     });
   }
   candidates.sort((a,b)=>(Date.parse(b.date)||0)-(Date.parse(a.date)||0));
@@ -197,12 +197,19 @@ function saveCandidateStatus(input) {
     const rows=Math.max(0,statuses.getLastRow()-1);
     const ids=rows?statuses.getRange(2,1,rows,1).getDisplayValues().map(r=>r[0]):[];
     const at=ids.indexOf(id);
-    const timestamp=(status==='POZVAN' && confirmed) ?
-       Utilities.formatDate(new Date(),'Europe/Belgrade','dd.MM.yyyy HH:mm:ss') : '';
-    const record=[id,status,comment,channel,timestamp,'Ručno potvrđeno u privatnom panelu; nije potvrda provajdera.'];
+    // Keep the original first manually confirmed send timestamp when editing notes or status.
+    // A later explicitly confirmed send updates the timestamp; merely opening WA/Viber never does.
+    const prior=at>=0 ? statuses.getRange(at+2,1,1,6).getDisplayValues()[0] : [];
+    const newConfirmed=(status==='POZVAN' && confirmed);
+    const timestamp=newConfirmed
+      ? Utilities.formatDate(new Date(),'Europe/Belgrade','dd.MM.yyyy HH:mm:ss')
+      : String(prior[4]||'');
+    const contactChannel=channel || (timestamp ? String(prior[3]||'') : '');
+    const record=[id,status,comment,contactChannel,timestamp,
+      timestamp?'Ručno potvrđeno u privatnom panelu; nije potvrda WhatsApp/Viber provajdera.':'Nema potvrde o poslatoj poruci.'];
     if(at>=0) statuses.getRange(at+2,1,1,6).setValues([record]);
     else statuses.getRange(statuses.getLastRow()+1,1,1,6).setValues([record]);
-    return {ok:true,status:status};
+    return {ok:true,status:status,sentAt:timestamp,sentChannel:contactChannel};
   } finally {lock.releaseLock();}
 }
 
