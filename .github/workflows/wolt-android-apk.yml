@@ -40,18 +40,18 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug
       - name: Rename APK
-        run: cp wolt-android/android/app/build/outputs/apk/debug/app-debug.apk Wolt-Kandidati-Android-v0.5.apk
+        run: cp wolt-android/android/app/build/outputs/apk/debug/app-debug.apk Wolt-Kandidati-AUTO.apk
       - uses: actions/upload-artifact@v4
         with:
           name: Wolt-Kandidati-Android-v0.5
-          path: Wolt-Kandidati-Android-v0.5.apk
+          path: Wolt-Kandidati-AUTO.apk
           if-no-files-found: error
       - name: Publish installable APK link
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release delete wolt-android-v0.5 --yes 2>/dev/null || true
-          gh release create wolt-android-v0.5 Wolt-Kandidati-Android-v0.5.apk \
+          gh release create wolt-android-v0.5 Wolt-Kandidati-AUTO.apk \
             --title "Wolt Kandidati AUTO Android v0.5 — stalni privatni panel" \
             --notes "Nova Android aplikacija automatski otvara stalni privatni Google Apps Script Wolt panel. Prijave se čitaju iz Meta→Google Sheets, telefon/Chrome mora biti prijavljen na ovlašćeni Google nalog. Nema ručnog uvoza ni podešavanja URL-a. WhatsApp prve poruke nisu automatizovane; nijedna poruka se ne šalje iz APK." \
-            --prerelease
+            --latest
