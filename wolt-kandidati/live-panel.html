@@ -104,7 +104,7 @@ main{padding:12px;max-width:900px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.3</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.4</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -294,6 +294,8 @@ async function copyRegistrationMessage(name) {
   }
 }
 let all=[], loading=false,hasLoaded=false;
+let cityBridge=new Map();
+let previousLeadFingerprint='';
 const fmt=v=>String(v||'');
 const txt=(id,v)=>{document.getElementById(id).textContent=v;};
 function refresh(){
@@ -302,10 +304,16 @@ function refresh(){
  txt('status','Proveravam novu prijavu…');
  google.script.run.withSuccessHandler(data=>{
   loading=false;hasLoaded=true;all=data.candidates||[];
+  applyCityBridge();
   txt('total',data.stats.total);txt('new',data.stats.new);
   txt('contacted',data.stats.contacted);
   txt('status','Povezano · provereno '+new Date().toLocaleTimeString('sr-RS')+' · test '+data.stats.test+' izuzet');
   document.getElementById('status').className='status';draw();previewMessageTemplate();
+  const leadFingerprint=all.map(x=>x.id).join('|');
+  if(leadFingerprint!==previousLeadFingerprint){
+    previousLeadFingerprint=leadFingerprint;
+    loadKnowledge();
+  }
  }).withFailureHandler(e=>{
   loading=false;txt('status','Greška u povezivanju: '+fmt(e.message||e));
   document.getElementById('status').className='status error';
@@ -485,13 +493,36 @@ function draw(){
 }
 
 let configLoaded=false;
+
+function parseCityBridge(raw){
+  const locations=new Map();
+  for(const line of String(raw||'').split(/\r?\n/)){
+    const p=line.indexOf('§');
+    if(p<2)continue;
+    const id=line.slice(0,p).trim(),candidate=line.slice(p+1).trim();
+    if(!/^l:\d{8,}$/.test(id))continue;
+    if(candidate && /^[a-zA-ZčćžđšČĆŽĐŠа-яА-Я\s.,-]{2,90}$/.test(candidate) && !candidate.includes('@') && !/<test lead/i.test(candidate)){
+      locations.set(id,candidate);
+    }
+  }
+  return locations;
+}
+function applyCityBridge(){
+  for(const x of all){
+    if(!x.city && cityBridge.has(String(x.id)))x.city=cityBridge.get(String(x.id));
+  }
+}
 function loadKnowledge() {
  google.script.run.withSuccessHandler(data=>{
   configLoaded=true;
+  const locationMsg=(data.messages||[]).find(m=>m.id==='META_CITY_BRIDGE_V1');
+  cityBridge=parseCityBridge(locationMsg&&locationMsg.text);
+  applyCityBridge();
+  if(hasLoaded){draw();previewMessageTemplate();}
   const list=document.getElementById('msgTemplates');
   list.replaceChildren();
   for(const msg of data.messages||[]){
-   if(msg.id==='AUTO_SLANJE'||msg.id==='IZVOR')continue;
+   if(msg.id==='AUTO_SLANJE'||msg.id==='IZVOR'||msg.id==='META_CITY_BRIDGE_V1')continue;
    const p=document.createElement('p');
    const b=document.createElement('b');b.textContent=msg.id+' — '+msg.state;
    const line=document.createElement('div');line.textContent=msg.text;
@@ -538,7 +569,7 @@ function saveCardStatus(x,card) {
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 setInterval(()=>{if(!document.hidden)refresh()},30000);
-initMessageTemplate();refresh();loadKnowledge();
+initMessageTemplate();refresh();
 </script>
 </body>
 </html>
