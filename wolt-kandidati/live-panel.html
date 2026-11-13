@@ -174,6 +174,25 @@ function refresh(){
  }).getOverview();
 }
 
+const WOLT_SENT_RE=/^\[WOLT_POSLATO\|(WhatsApp|Viber)\|([^\]]+)\]\s*/i;
+function existingSent(x){
+ const match=String(x.comment||'').match(WOLT_SENT_RE);
+ const date=String(x.sentAt||match?.[2]||'').trim();
+ const channel=String(x.sentChannel||match?.[1]||x.channel||'').trim();
+ return date?{date,channel}:null;
+}
+function plainComment(x){return String(x.comment||'').replace(WOLT_SENT_RE,'').trim()}
+function stampedComment(channel,date,comment){
+ const clean=String(comment||'').replace(WOLT_SENT_RE,'').trim();
+ return '[WOLT_POSLATO|'+channel+'|'+date+'] '+clean;
+}
+function nowBelgrade(){
+ return new Intl.DateTimeFormat('sr-RS',{
+   timeZone:'Europe/Belgrade',year:'numeric',month:'2-digit',day:'2-digit',
+   hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+ }).format(new Date());
+}
+
 function contactPhone(raw){
  let digits=String(raw||'').replace(/\D/g,'');
  if(digits.startsWith('00381')) digits=digits.slice(2);
@@ -192,7 +211,8 @@ function copyTextToClipboard(text){
 function openCandidateWhatsApp(x,notice){
  const number=contactPhone(x.phone);
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
- if(x.sentAt && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+x.sentAt+'. Da li želiš da otvoriš WhatsApp ponovo?'))return;
+ const sent=existingSent(x);
+ if(sent && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+sent.date+'. Da li želiš da otvoriš WhatsApp ponovo?'))return;
  const message=registrationMessage(x.name||'');
  const link='https://wa.me/'+number+'?text='+encodeURIComponent(message);
  setNotice(notice,'Otvoren je WhatsApp sa pripremljenom porukom. Pritisni Send. Otvaranje ne znači da je poruka poslata.');
@@ -201,7 +221,8 @@ function openCandidateWhatsApp(x,notice){
 function openCandidateViber(x,notice){
  const number=contactPhone(x.phone);
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
- if(x.sentAt && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+x.sentAt+'. Da li želiš da otvoriš Viber ponovo?'))return;
+ const sent=existingSent(x);
+ if(sent && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+sent.date+'. Da li želiš da otvoriš Viber ponovo?'))return;
  const message=registrationMessage(x.name||'');
  // Viber does not document guaranteed draft-in-recipient-chat behavior for ordinary personal numbers.
  // Copy the text first, then attempt opening the chat; the operator may have to paste and press Send.
@@ -217,13 +238,14 @@ function openCandidateViber(x,notice){
 function markManualContact(x,channel,notice){
  if(!canContact(x)){setNotice(notice,'Nije dozvoljeno kontaktiranje ovog kandidata.');return}
  if(!window.confirm('Da li si ZAISTA poslao poruku preko '+channel+'? Sačuvaćemo datum i vreme tvoje potvrde. Ovo nije potvrda isporuke od WhatsApp/Viber-a.'))return;
+ const when=nowBelgrade();
  setNotice(notice,'Upisujem potvrdu u privatnu evidenciju…');
  google.script.run.withSuccessHandler(result=>{
-   const time=result&&result.sentAt?result.sentAt:'(datum će biti dostupan nakon osvežavanja)';
+   const time=result&&result.sentAt?result.sentAt:when;
    setNotice(notice,'POSLATO · '+channel+' · '+time+' — ručno potvrđeno. Osvežavam spisak…');
    refresh();
  }).withFailureHandler(e=>setNotice(notice,'Greška: '+String(e.message||e)))
- .saveCandidateStatus({id:x.id,status:'POZVAN',comment:x.comment||'',channel:channel,confirmed:true});
+ .saveCandidateStatus({id:x.id,status:'POZVAN',comment:stampedComment(channel,when,plainComment(x)),channel:channel,confirmed:true});
 }
 function makeLine(label,value,isLink,href){
  const wrap=document.createElement('div'),caption=document.createElement('strong');
@@ -258,8 +280,9 @@ function draw(){
    const label=document.createElement('div');
    const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
    const flag=document.createElement('span');flag.className='badge';
-   const hasSend=!!x.sentAt && /^(WhatsApp|Viber)$/i.test(String(x.sentChannel||x.channel||''));
-   flag.textContent=((x.status==='POZVAN'&&hasSend)?'POSLATO · '+(x.sentChannel||x.channel):
+   const sent=existingSent(x);
+   const hasSend=!!sent && /^(WhatsApp|Viber)$/i.test(sent.channel);
+   flag.textContent=((x.status==='POZVAN'&&hasSend)?'POSLATO · '+sent.channel:
      (x.status==='POZVAN'?'KONTAKTIRAN':(x.status||'NIJE POZVAN')))+
      (x.reapplicant?' · PONOVNA PRIJAVA':'');
    label.append(name,flag);
@@ -273,7 +296,7 @@ function draw(){
      makeLine('E-mail',x.email||'',!!x.email,x.email?'mailto:'+x.email:''),
      makeLine('Adresa',x.address||'',false,''),
      makeLine('Datum prijave',x.dateLabel||x.date||'Nije dostavljen',false,''),
-     makeLine('Ručna potvrda slanja',x.sentAt ? (x.sentAt+' · '+(x.sentChannel||x.channel||'kanal nije naveden')) : 'Nije evidentirano',false,'')
+     makeLine('Ručna potvrda slanja',sent ? (sent.date+' · '+(sent.channel||'kanal nije naveden')) : 'Nije evidentirano',false,'')
    );
    const buttons=document.createElement('div');buttons.className='contactButtons';
    const wa=document.createElement('button');wa.className='waButton';wa.textContent='WhatsApp';wa.disabled=!canContact(x);
@@ -307,7 +330,7 @@ function draw(){
      const o=document.createElement('option');o.value=value;o.textContent=value||'Kanal kontakta';channel.append(o);
    }
    channel.value=x.channel||'';
-   const memo=document.createElement('textarea');memo.placeholder='Komentar (opciono)';memo.value=x.comment||'';
+   const memo=document.createElement('textarea');memo.placeholder='Komentar (opciono)';memo.value=plainComment(x);
    const save=document.createElement('button');save.textContent='Sačuvaj status / komentar';
    const saveNotice=document.createElement('div');saveNotice.className='saveNotice note';
    edit.append(choices,channel,memo,save,saveNotice);
@@ -355,7 +378,9 @@ function learn() {
 }
 function saveCardStatus(x,card) {
  const status=card.querySelector('select').value;
- const comment=card.querySelector('textarea').value.trim();
+ const commentUser=card.querySelector('textarea').value.trim();
+ const previous=existingSent(x);
+ const comment=previous?stampedComment(previous.channel,previous.date,commentUser):commentUser;
  const channel=card.querySelector('.contactChannel').value;
  const notice=card.querySelector('.saveNotice');
  let confirmed=false;
