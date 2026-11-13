@@ -43,7 +43,7 @@ footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.3.1</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.3.2</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 <section class="registration-panel" aria-label="Registracija kandidata">
@@ -134,6 +134,22 @@ function draw(){
   const date=document.createElement('div');date.className='meta';date.textContent=fmt(x.dateLabel||x.date)+(x.city?' · '+x.city:'');
   const status=document.createElement('span');status.className='badge';status.textContent=x.reapplicant ? x.status+' · PONOVNA PRIJAVA' : x.status;
 
+  const wa=document.createElement('button');
+  wa.className='secondary';
+  wa.style.marginTop='10px';
+  wa.style.marginRight='8px';
+  wa.style.background='#186b58';
+  const blocked=/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim()) || !/^\\+?[0-9 ()-]{9,}$/.test(String(x.phone||''));
+  wa.textContent=blocked ? 'WhatsApp kontakt blokiran / bez broja' : 'Prva WhatsApp poruka (ručno)';
+  wa.disabled=blocked;
+  if(blocked)wa.style.opacity='.5';
+  wa.onclick=()=>{
+    const number=String(x.phone||'').replace(/\\D/g,'');
+    if(!/^381[0-9]{8,10}$/.test(number)){window.alert('Proveri broj i pozivni +381 pre slanja.');return}
+    if(!window.confirm('Proveri da kandidat ima saglasnost da bude kontaktiran na WhatsApp-u. Otvorićemo razgovor sa spremnom porukom; ništa se ne šalje automatski.'))return;
+    const url='https://wa.me/'+number+'?text='+encodeURIComponent(registrationMessage(x.name||''));
+    window.open(url,'_blank','noopener,noreferrer');
+  };
   const toggle=document.createElement('button');toggle.className='secondary';toggle.textContent='Evidentiraj kontakt / komentar';
   toggle.style.marginTop='10px';
   const edit=document.createElement('div');edit.className='panel';edit.style.display='none';
@@ -152,7 +168,7 @@ function draw(){
   const notice=document.createElement('div');notice.className='saveNotice note';
   edit.append(choices,channel,memo,save,notice);
   toggle.onclick=()=>{edit.style.display=edit.style.display==='none'?'block':'none'};
-  box.append(name,phone,date,status,toggle,edit);list.append(box);
+  box.append(name,phone,date,status,wa,toggle,edit);list.append(box);
  }
 }
 
