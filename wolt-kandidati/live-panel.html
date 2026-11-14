@@ -167,10 +167,15 @@ main{padding:12px;max-width:900px}
 .phaseQuick.decline{background:#9f2534;color:white;font-weight:800}
 .phaseQuick:disabled{opacity:.45;cursor:not-allowed}
 
+
+/* WhatsApp message sent is GREEN even when the candidate still awaits a reply.
+   Declined/STOP always overrides the sent-message color. */
+.badge.phase-whatsapp-sent{background:#13633f;color:#e0ffec;border:1px solid #3cc982;font-weight:850}
+.item.crmWhatsAppSent{border:1px solid #287c56;box-shadow:0 2px 12px #14634626}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.6.0</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.6.1</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -901,8 +906,12 @@ function draw(){
    const flag=document.createElement('span');flag.className='badge';
    const logs=getSendLog(x);
    const state=crmState(x),stage=phaseDef(state.phase);
-   flag.textContent=contactSummary(x)+(x.reapplicant?' · PONOVNA PRIJAVA':'');
-   flag.classList.add('phase-'+stage.tone);
+   const sentOnWhatsapp=!!state.sent.WhatsApp;
+   const showWhatsAppGreen=sentOnWhatsapp && stage.tone!=='declined' && state.phase!=='ERROR';
+   flag.textContent=(showWhatsAppGreen?'WHATSAPP POSLATO · ':'')+
+     contactSummary(x)+(x.reapplicant?' · PONOVNA PRIJAVA':'');
+   flag.classList.add(showWhatsAppGreen?'phase-whatsapp-sent':'phase-'+stage.tone);
+   if(showWhatsAppGreen)box.classList.add('crmWhatsAppSent');
    if(stage.tone==='declined')box.classList.add('crmDeclined');
    label.append(name,flag);
    if(state.work && state.phase!=='WORKING'){
