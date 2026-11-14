@@ -707,7 +707,7 @@ function refreshCounters(){
  txt('declined',stages.filter(v=>v==='DECLINED').length);
 }
 function canEmail(x){
-  return !!candidateEmail(x) && !/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim());
+  return !!candidateEmail(x) && !phaseContactBlocked(x);
 }
 function emailSubject(x){
   const title=registrationMessage(x,cleanOldAgencyName(woltEmailTemplate.subject)).replace(/\s+/g,' ').trim();
@@ -741,7 +741,7 @@ function contactPhone(raw){
  return /^381\d{8,10}$/.test(digits)?digits:'';
 }
 function canContact(x){
- return !!contactPhone(x.phone) && !/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim());
+ return !!contactPhone(x.phone) && !phaseContactBlocked(x);
 }
 function setNotice(node,msg){node.textContent=msg;node.setAttribute('role','status');}
 function copyTextToClipboard(text){
@@ -788,14 +788,16 @@ function writeManualChannel(x,channel,mark,notice,onCanceled) {
   const when=nowBelgrade();
   const newLog=Object.assign({},logged);
   if(mark)newLog[channel]=when;else delete newLog[channel];
-  const comment=stampedContactLog(x,channel,when,plainComment(x),!mark);
-  if(comment.length>700){
-    setNotice(notice,'Komentar je predugačak za bezbedno čuvanje statusa. Skrati komentar u detaljima kandidata pa pokušaj ponovo.');
+  let comment;
+  try{comment=stampedContactLog(x,channel,when,plainComment(x),!mark)}
+  catch(e){
+    setNotice(notice,String(e.message||e));
     if(onCanceled)onCanceled();return;
   }
   const liveChannel=newLog.WhatsApp?'WhatsApp':newLog.Viber?'Viber':newLog['E-mail']?'Drugo':'';
   const wasContacted=String(x.status||'').toUpperCase()==='POZVAN';
-  const status=liveChannel?'POZVAN':(wasContacted?'NIJE POZVAN':(x.status||'NIJE POZVAN'));
+  const inferredNext=crmState({...x,comment});
+  const status=liveChannel?'POZVAN':backendForPhase(inferredNext.phase);
   const confirmed=status==='POZVAN';
   const providerChannel=channel==='E-mail'?'Drugo':channel;
   // Preserve sender-independent evidence in the comment. The old Apps Script
