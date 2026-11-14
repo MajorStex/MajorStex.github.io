@@ -291,7 +291,7 @@ function initMessageTemplate(){
 }
 
 const WOLT_EMAIL_TEMPLATE_KEY='wolt_email_template_v1';
-const WOLT_DEFAULT_EMAIL_TEMPLATE={"subject":"🚴 Wolt dostava | Nastavi prijavu","body":"{pozdrav}\n\n🚴 WOLT DOSTAVA — PRILIKA ZA FLEKSIBILAN POSAO\nHvala ti što si se prijavio/la preko našeg oglasa! Javljamo se povodom prijave da proverimo koja partnerska agencija odgovara tvom gradu i uslovima.\n\n{podaci}\n\n⏰ Fleksibilno radno vreme, u skladu sa uslovima partnerske agencije.\n💰 Mogućnost dodatne ili redovne zarade — zavisi od angažovanja i uslova saradnje.\n\n📝 NAJVAŽNIJE: POPUNI REGISTRACIONI FORMULAR\n{link}\n\n🔐 Pre nego što otvoriš link, prijavi se na svoj Google (Gmail) nalog u pregledaču. Tako ćeš lakše popuniti formular ako Google zatraži prijavu.\n📞 U formularu ostavi ispravan broj telefona. Na taj broj ćemo te kontaktirati u vezi sa sledećim koracima.\n\n📲 Ako se ne snađeš, instaliraj WhatsApp: https://www.whatsapp.com/download\nMožeš nam pisati na WhatsApp ili nas pozvati na 064/908-66-77.\n\n✅ Kada popuniš formular, odgovori na ovaj mejl sa GOTOVO.\n\nPozdrav,\nTim za Wolt prijave\n\nAko ne želiš dalji kontakt, odgovori STOP."};
+const WOLT_DEFAULT_EMAIL_TEMPLATE={"subject":"🚴 Wolt dostava | Registracija i sledeći koraci","body":"{pozdrav}\n\n🚴 WOLT DOSTAVA — PRILIKA ZA FLEKSIBILAN POSAO\nHvala ti što si se prijavio/la preko našeg oglasa! Javljamo se povodom prijave da proverimo koja partnerska agencija odgovara tvom gradu i uslovima.\n\n{podaci}\n\n⏰ Fleksibilno radno vreme, u skladu sa uslovima partnerske agencije.\n💰 Mogućnost dodatne ili redovne zarade — zavisi od angažovanja i uslova saradnje.\n\n📝 NAJVAŽNIJE: POPUNI REGISTRACIONI FORMULAR\n{link}\n\n🔐 Pre nego što otvoriš link, prijavi se na svoj Google (Gmail) nalog u pregledaču. Tako ćeš lakše popuniti formular ako Google zatraži prijavu.\n📞 U formularu ostavi ispravan broj telefona. Na taj broj ćemo te kontaktirati u vezi sa sledećim koracima.\n\n📲 Ako se ne snađeš, instaliraj WhatsApp: https://www.whatsapp.com/download\nMožeš nam pisati na WhatsApp ili nas pozvati na 064/908-66-77.\n\n✅ Kada popuniš formular, odgovori na ovaj mejl sa GOTOVO.\n\nPozdrav,\nTim za Wolt prijave\n\nAko ne želiš dalji kontakt, odgovori STOP."};
 let woltEmailTemplate={...WOLT_DEFAULT_EMAIL_TEMPLATE};
 let emailTemplateDirty=false;
 let emailTemplateSaveInFlight=false;
@@ -310,7 +310,7 @@ function cleanOldAgencyName(value){
   return String(value||'').replace(/\s*\|\s*BG\s+Delivery\b/gi,'')
     .replace(/\bJavljamo se iz BG\s+Delivery\b/gi,'Javljamo se')
     .replace(/\bBG\s+Delivery tim\b/gi,'Tim za Wolt prijave')
-    .replace(/\bBG\s+Delivery\b/gi,'').replace(/ {2,}/g,' ').trim();
+    .replace(/\bBG\s+Delivery\b/gi,'').replace(/[\s–|-]+$/g,'').replace(/ {2,}/g,' ').trim();
 }
 function removeBrandFromEmailTemplate(record){
   if(!record||typeof record!=='object')return record;
