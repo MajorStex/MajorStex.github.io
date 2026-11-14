@@ -820,7 +820,7 @@ function markManualContact(x,channel,notice){writeManualChannel(x,channel,true,n
 function saveWorkflowStatus(x,phase,notice,button,declineCancel){
  const current=crmState(x),now=nowBelgrade();
  if(phase===current.phase){setNotice(notice,'Ovaj status je već sačuvan.');return}
- if(phase==='SENT' && !WOLT_CHANNELS.some(ch=>!!current.sent[ch])){
+ if(['SENT','NO_REPLY'].includes(phase) && !WOLT_CHANNELS.some(ch=>!!current.sent[ch])){
    setNotice(notice,'Prvo označi na kom kanalu je poruka zaista poslata. Samo otvaranje poruke nije slanje.');
    if(declineCancel)declineCancel();return;
  }
