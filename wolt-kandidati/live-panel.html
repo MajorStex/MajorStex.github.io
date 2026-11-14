@@ -123,6 +123,41 @@ main{padding:12px;max-width:900px}
 #emailBodyInput{min-height:350px}
 #emailSubjectPreview{display:block;color:#d6efff;margin:7px 0 4px;overflow-wrap:anywhere}
 #emailBodyPreview{min-height:170px}
+
+/* CRM progression: status and channel delivery are independent. */
+.stats{grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+.stats .stat:nth-child(3){background:#40371f;border-color:#806b30}
+.stats .stat:nth-child(3) .num{color:#ffdc71}
+.stats .stat:nth-child(4){background:#20394e;border-color:#3a6380}
+.stats .stat:nth-child(4) .num{color:#9bd5ff}
+.stats .stat:nth-child(5){background:#282e54;border-color:#4d5d99}
+.stats .stat:nth-child(5) .num{color:#c4c6ff}
+.stats .stat:nth-child(6){background:#173d30;border-color:#276949}
+.stats .stat:nth-child(6) .num{color:#91e2b5}
+.stats .stat:nth-child(7){background:#5b2029;border-color:#9b3344}
+.stats .stat:nth-child(7) .num{color:#ff929f}
+@media(max-width:960px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:450px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.item.crmDeclined{background:#431b25;border:2px solid #e05a6a;box-shadow:0 4px 15px #641b284d}
+.item.crmDeclined .contactInfo{color:#f5dfe2}
+.badge.phase-new{background:#68222b;color:#ffe0e4;border:1px solid #b34856;font-weight:800}
+.badge.phase-waiting{background:#75521c;color:#ffe7a3;border:1px solid #b88c2f;font-weight:800}
+.badge.phase-progress{background:#1c4b6b;color:#d5eeff;border:1px solid #477ca7;font-weight:800}
+.badge.phase-active{background:#155b43;color:#d3ffe3;border:1px solid #3b9c72;font-weight:800}
+.badge.phase-declined{background:#a92335;color:#fff;border:1px solid #ff7786;font-size:13px;font-weight:900;padding:6px 10px}
+.statusEditor{border:1px solid #3e6073;background:#112b3c;border-radius:12px;padding:11px;margin-top:12px}
+.statusEditor label{display:block;font-size:12px;color:#bbd9e8;margin-bottom:7px;font-weight:700}
+.statusRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.statusRow select{border:1px solid #48677b;border-radius:9px;background:#092237;color:#effcff;padding:10px;width:100%;min-height:44px;font:inherit;font-size:13px}
+.statusRow button{font-size:13px;min-height:44px;padding:8px 13px;background:#08bda1;color:#002c27}
+.statusMeta{font-size:11px;color:#a3c0d0;margin-top:8px;line-height:1.5}
+.statusMeta span{display:inline-block;margin-right:10px}
+.deliveryList{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:9px}
+.deliveryMark{font-size:11px;color:#d6e9fa;background:#25425a;border:1px solid #49647a;border-radius:7px;padding:4px 7px}
+.deliveryMark.email{background:#574923;color:#ffe8a3;border-color:#89713b}
+.deliveryNone{font-size:11px;color:#ffc6cd}
+.statusEditor.busy{opacity:.65;pointer-events:none}
+
 </style>
 </head>
 <body>
@@ -132,15 +167,27 @@ main{padding:12px;max-width:900px}
 
 <div class="stats">
  <div class="stat"><div class="num" id="total">–</div><div class="tag">Kandidati</div></div>
- <div class="stat"><div class="num" id="new">–</div><div class="tag">Nije poslato</div></div>
- <div class="stat"><div class="num" id="emailOnly">–</div><div class="tag">Samo e-mail</div></div>
- <div class="stat"><div class="num" id="contacted">–</div><div class="tag">WhatsApp/Viber</div></div>
- <div class="stat"><div class="num" id="started">–</div><div class="tag">Počelo da radi</div></div>
+ <div class="stat"><div class="num" id="new">–</div><div class="tag">Novi</div></div>
+ <div class="stat"><div class="num" id="awaiting">–</div><div class="tag">Čekaju odgovor</div></div>
+ <div class="stat"><div class="num" id="processing">–</div><div class="tag">U procesu</div></div>
+ <div class="stat"><div class="num" id="inWolt">–</div><div class="tag">U Wolt aplikaciji</div></div>
+ <div class="stat"><div class="num" id="started">–</div><div class="tag">Počeli da rade</div></div>
+ <div class="stat"><div class="num" id="declined">–</div><div class="tag">Ne žele da rade</div></div>
 </div>
 <div class="contactToolbar">
 <input id="filter" type="search" placeholder="Ime, telefon, grad, e-mail…" oninput="draw()" autocomplete="off">
-<select id="contactFilter" aria-label="Filter kandidata" onchange="draw()">
-<option value="all">Svi kandidati</option><option value="need">Nije poslato</option><option value="email">Samo e-mail</option><option value="contacted">WhatsApp / Viber poslato</option><option value="started">Počeli da rade</option><option value="stop">STOP / Odustao</option>
+<select id="contactFilter" aria-label="Filtriraj statuse kandidata" onchange="draw()">
+<option value="all">Svi kandidati</option>
+<option value="need">Novi / nije kontaktiran</option>
+<option value="awaiting">Poslato – čeka odgovor</option>
+<option value="interested">Odgovorio / zainteresovan</option>
+<option value="processing">Prijava u procesu</option>
+<option value="wolt">Unet u Wolt aplikaciju</option>
+<option value="started">Počeli da rade</option>
+<option value="declined">Ne želi da radi</option>
+<option value="stop">STOP / ne kontaktirati</option>
+<option value="email">Poslat samo e-mail</option>
+<option value="contacted">Poslato WhatsApp/Viber</option>
 </select>
 <button type="button" class="secondary" style="flex:0 0 auto;min-height:43px" onclick="refresh()">↻ Osveži</button>
 </div>
@@ -650,12 +697,14 @@ function nowBelgrade(){
 }
 
 function refreshCounters(){
-  const active=all.filter(x=>contactAppearance(x)!=='optout');
-  txt('total',all.length);
-  txt('new',active.filter(x=>contactAppearance(x)==='pending').length);
-  txt('emailOnly',active.filter(x=>contactAppearance(x)==='emailOnly').length);
-  txt('contacted',active.filter(x=>contactAppearance(x)==='sent').length);
-  txt('started',all.filter(x=>!!workStartedDate(x)).length);
+ const stages=all.map(currentPhase);
+ txt('total',all.length);
+ txt('new',stages.filter(v=>v==='NEW').length);
+ txt('awaiting',stages.filter(v=>['SENT','NO_REPLY'].includes(v)).length);
+ txt('processing',stages.filter(v=>['INTERESTED','FORM_WAIT','FORM_DONE','REVIEW','INTRO','DOCS','AGENCY','EQUIPMENT','LATER'].includes(v)).length);
+ txt('inWolt',stages.filter(v=>['WOLT_APP','WOLT_APPROVED','ACTIVE'].includes(v)).length);
+ txt('started',stages.filter(v=>v==='WORKING').length);
+ txt('declined',stages.filter(v=>v==='DECLINED').length);
 }
 function canEmail(x){
   return !!candidateEmail(x) && !/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim());
@@ -765,49 +814,41 @@ function writeManualChannel(x,channel,mark,notice,onCanceled) {
 }
 function markManualContact(x,channel,notice){writeManualChannel(x,channel,true,notice)}
 
-function saveWorkStarted(x,started,notice,onCanceled) {
-  const before=workStartedDate(x);
-  if((!!before)===!!started){if(onCanceled)onCanceled();return}
-  if(!window.confirm(started
-    ?'Potvrđuješ da je kandidat STVARNO počeo da radi? Upisujemo datum i vreme u tvoju evidenciju.'
-    :'Ukloniti oznaku da je kandidat počeo da radi? Ovo ne menja evidenciju poslatih poruka.')) {
-      if(onCanceled)onCanceled();
-      return;
-  }
-  const commentText=plainComment(x);
-  const sentMarkers=WOLT_CHANNELS.filter(k=>getSendLog(x)[k])
-    .map(k=>'[WOLT_POSLATO|'+k+'|'+getSendLog(x)[k]+']').join('');
-  const startedDate=started?(before||nowBelgrade()):'';
-  const workMarker=startedDate?'[WOLT_RAD|START|'+startedDate+']':'';
-  const comment=(sentMarkers+workMarker+' '+commentText).trim();
-  if(comment.length>700){
-    setNotice(notice,'Komentar je predugačak da bismo sačuvali oznaku. Skrati komentar u detaljima kandidata.');
-    if(onCanceled)onCanceled();
-    return;
-  }
-  const rawStatus=String(x.status||'NIJE POZVAN').trim().toUpperCase();
-  const allowed=['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','GREŠKA','ODUSTAO','STOP'];
-  const status=allowed.includes(rawStatus)?rawStatus:'NIJE POZVAN';
-  const confirmed=status==='POZVAN';
-  // Existing Google Apps Script requires an already-contacted candidate to
-  // be submitted as confirmed. Preserve their original channel and log markers.
-  // Any backend timestamp refresh is ignored for displayed dates when the
-  // original per-channel marker exists.
-  const previousSend=getSendLog(x);
-  const channel=confirmed?
-    (['WhatsApp','Viber','Telefon','Drugo'].includes(x.channel)?x.channel:
-      previousSend.WhatsApp?'WhatsApp':previousSend.Viber?'Viber':'Drugo')
-    :(x.channel||'');
-  setNotice(notice,'Čuvam evidenciju početka rada…');
-  google.script.run.withSuccessHandler(()=>{
-    setNotice(notice,started?'Počeo da radi · '+startedDate+' — sačuvano.':'Oznaka „Počeo da radi“ je uklonjena.');
-    refresh();
-  }).withFailureHandler(e=>{
-    setNotice(notice,'Čuvanje nije uspelo: '+String(e.message||e));
-    if(onCanceled)onCanceled();
-  }).saveCandidateStatus({id:x.id,status,comment,channel,confirmed});
-}
 
+function saveWorkflowStatus(x,phase,notice,button,declineCancel){
+ const current=crmState(x),now=nowBelgrade();
+ if(phase===current.phase){setNotice(notice,'Ovaj status je već sačuvan.');return}
+ if(phase==='SENT' && !WOLT_CHANNELS.some(ch=>!!current.sent[ch])){
+   setNotice(notice,'Prvo označi na kom kanalu je poruka zaista poslata. Samo otvaranje poruke nije slanje.');
+   if(declineCancel)declineCancel();return;
+ }
+ if(['DECLINED','STOP','WORKING'].includes(phase)){
+   const msg=phase==='DECLINED'
+     ?'Da li je kandidat jasno rekao da NE ŽELI DA RADI? Biće označen crveno, bez novih poruka.'
+     :phase==='STOP'
+       ?'Da li je kandidat zatražio da ga više NE KONTAKTIRAMO?'
+       :'Da li je kandidat stvarno POČEO DA RADI?';
+   if(!window.confirm(msg)){if(declineCancel)declineCancel();return}
+ }
+ const next={...current,sent:{...current.sent},phase,at:now};
+ if(phase==='WORKING'&&!next.work)next.work=now;
+ const caption='Status sačuvan: '+phaseDef(phase).label+' · '+now;
+ if(button)button.disabled=true;
+ saveCRM(x,next,notice,caption,()=>{if(button)button.disabled=false;if(declineCancel)declineCancel()});
+}
+function saveWorkStarted(x,started,notice,onCanceled){
+ const current=crmState(x);
+ if((!!current.work)===!!started){if(onCanceled)onCanceled();return}
+ if(!window.confirm(started
+   ?'Da li je kandidat stvarno POČEO DA RADI? Sačuvaćemo datum i vreme.'
+   :'Ukloniti ručnu oznaku „Počeo da radi“? Status će postati „Profil aktiviran“.')) {
+   if(onCanceled)onCanceled();return;
+ }
+ const now=nowBelgrade();
+ const next={...current,sent:{...current.sent},
+   work:started?now:'',phase:started?'WORKING':(current.phase==='WORKING'?'ACTIVE':current.phase),at:now};
+ saveCRM(x,next,notice,started?'Počeo da radi · '+now:'Uklonjena oznaka početka rada.',onCanceled);
+}
 function makeLine(label,value,isLink,href){
  const wrap=document.createElement('div'),caption=document.createElement('strong');
  caption.textContent=label;wrap.append(caption);
