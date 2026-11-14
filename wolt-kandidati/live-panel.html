@@ -126,7 +126,7 @@ main{padding:12px;max-width:900px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.5.2</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.6.0</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -470,69 +470,178 @@ function refresh(){
 }
 
 
+
+/* Lightweight CRM state packed at start of the existing Google STATUSI comment.
+   Google live backend currently returns only first 180 chars of comment.
+   Compact dates and keep ALL metadata within that window to prevent losing data.
+   Legacy statuses and markers are read transparently and migrated on first save. */
 const WOLT_SENT_RE=/^\[WOLT_POSLATO\|(WhatsApp|Viber|E-mail)\|([^\]]+)\]\s*/i;
+const WOLT_WORK_RE=/\[WOLT_RAD\|START\|([^\]]{4,48})\]/i;
+const WOLT_CRM_RE=/^\[WC1\|([^\]]{1,160})\]\s*/;
 const WOLT_CHANNELS=['WhatsApp','Viber','E-mail'];
-function getSendLog(x) {
-  let body=String(x.comment||'');
-  const entries={};
-  let i=0,match;
-  while((match=body.match(WOLT_SENT_RE))&&i++<6){
-    entries[match[1]]=match[2];
-    body=body.slice(match[0].length);
-  }
-  // Backwards compatibility for rows created by older versions of the panel.
-  // Ignore backend 'Drugo' timestamp: it can mean email or another type of contact.
-  const channel=String(x.sentChannel||x.channel||'');
-  if((channel==='WhatsApp'||channel==='Viber')&&x.sentAt&&!entries[channel])entries[channel]=String(x.sentAt);
-  return entries;
+const WOLT_PHASES=[
+ {id:'NEW',label:'Nova prijava – nije kontaktiran',tone:'new'},
+ {id:'SENT',label:'Poruka poslata – čeka odgovor',tone:'waiting'},
+ {id:'NO_REPLY',label:'Ne odgovara – potrebno praćenje',tone:'waiting'},
+ {id:'INTERESTED',label:'Odgovorio – zainteresovan',tone:'progress'},
+ {id:'FORM_WAIT',label:'Čeka naš registracioni formular',tone:'waiting'},
+ {id:'FORM_DONE',label:'Popunio naš registracioni formular',tone:'progress'},
+ {id:'REVIEW',label:'Prijava u proveri / obradi',tone:'progress'},
+ {id:'WOLT_APP',label:'Unet u Wolt Partner aplikaciju',tone:'progress'},
+ {id:'WOLT_APPROVED',label:'Wolt odobrio prijavu',tone:'progress'},
+ {id:'INTRO',label:'Čeka / završava uvodne lekcije',tone:'progress'},
+ {id:'DOCS',label:'Dokumenta u pripremi / proveri',tone:'progress'},
+ {id:'AGENCY',label:'Izabrana partnerska agencija',tone:'progress'},
+ {id:'EQUIPMENT',label:'Čeka opremu / aktivaciju',tone:'waiting'},
+ {id:'ACTIVE',label:'Wolt profil aktiviran',tone:'active'},
+ {id:'WORKING',label:'Počeo da radi',tone:'active'},
+ {id:'LATER',label:'Zainteresovan – javiti se kasnije',tone:'waiting'},
+ {id:'DECLINED',label:'NE ŽELI DA RADI',tone:'declined'},
+ {id:'STOP',label:'STOP – ne kontaktirati',tone:'declined'},
+ {id:'ERROR',label:'Pogrešni kontakt podaci',tone:'waiting'}
+];
+const PHASE_BY_ID=new Map(WOLT_PHASES.map(p=>[p.id,p]));
+function phaseDef(id){return PHASE_BY_ID.get(id)||PHASE_BY_ID.get('NEW')}
+function compactDate(s){
+  const d=String(s||'').trim();
+  if(/^\d{12}$/.test(d))return d;
+  const m=d.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\.?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(!m)return '';
+  return m[3].slice(-2)+m[2].padStart(2,'0')+m[1].padStart(2,'0')+
+    m[4].padStart(2,'0')+m[5]+(m[6]||'00');
 }
-function existingSent(x) {
-  const entries=getSendLog(x);
-  for(const key of ['WhatsApp','Viber','E-mail']){
-    if(entries[key])return {date:entries[key],channel:key};
+function displayDate(s){
+  const v=String(s||'');
+  if(!/^\d{12}$/.test(v))return v;
+  return v.slice(4,6)+'.'+v.slice(2,4)+'.20'+v.slice(0,2)+' '+
+    v.slice(6,8)+':'+v.slice(8,10)+':'+v.slice(10,12);
+}
+function inferPhase(status,sent,work){
+  const st=String(status||'NIJE POZVAN').trim().toUpperCase();
+  if(st==='STOP')return 'STOP';
+  if(st==='ODUSTAO')return 'DECLINED';
+  if(work)return 'WORKING';
+  if(st==='GREŠKA')return 'ERROR';
+  if(st==='ODGOVORIO')return 'INTERESTED';
+  if(st==='ČEKA ODGOVOR')return 'SENT';
+  if(sent.WhatsApp||sent.Viber||sent['E-mail']||st==='POZVAN')return 'SENT';
+  return 'NEW';
+}
+function crmState(x){
+  const raw=String(x&&x.comment||'');
+  const sent={};
+  let work='',phase='',at='',note=raw,originalCompact=false;
+  const compact=raw.match(WOLT_CRM_RE);
+  if(compact){
+    originalCompact=true;note=raw.slice(compact[0].length).trim();
+    const d={};
+    for(const item of compact[1].split(';')){
+      const i=item.indexOf('=');
+      if(i>0)d[item.slice(0,i)]=item.slice(i+1);
+    }
+    if(d.a)sent.WhatsApp=displayDate(d.a);
+    if(d.b)sent.Viber=displayDate(d.b);
+    if(d.c)sent['E-mail']=displayDate(d.c);
+    work=displayDate(d.d||'');
+    phase=d.p||'';at=displayDate(d.t||'');
+  }else{
+    let m,i=0;
+    while((m=note.match(WOLT_SENT_RE))&&i++<6){
+      sent[m[1]]=m[2];note=note.slice(m[0].length);
+    }
+    m=note.match(WOLT_WORK_RE);
+    if(m){work=m[1];note=note.replace(WOLT_WORK_RE,'');}
+    note=note.trim();
+    // Backend timestamp is a fallback for historical confirmed WA/Viber sends only.
+    const channel=String(x&&((x.sentChannel||x.channel))||'');
+    if(['WhatsApp','Viber'].includes(channel) && x.sentAt && !sent[channel])
+      sent[channel]=String(x.sentAt);
   }
+  if(!PHASE_BY_ID.has(phase))phase=inferPhase(x&&x.status,sent,work);
+  return {sent,work,phase,at,note,originalCompact};
+}
+function crmPack(state){
+  const tokens=[];
+  const channels=[['a',state.sent.WhatsApp],['b',state.sent.Viber],['c',state.sent['E-mail']],['d',state.work]];
+  for(const [key,value] of channels){
+    if(!value)continue;
+    const compact=compactDate(value);
+    if(!compact)throw new Error('Nepoznat format datuma: '+String(value));
+    tokens.push(key+'='+compact);
+  }
+  tokens.push('p='+phaseDef(state.phase).id);
+  if(state.at){
+    const t=compactDate(state.at);
+    if(!t)throw new Error('Nepoznat datum promene statusa');
+    tokens.push('t='+t);
+  }
+  const prefix='[WC1|'+tokens.join(';')+']';
+  const note=String(state.note||'').trim();
+  const full=prefix+(note?' '+note:'');
+  if(prefix.length>175 || full.length>180)
+    throw new Error('Za čuvanje svih oznaka, napomena mora biti kraća (maksimum '+Math.max(0,179-prefix.length)+' znakova). Skrati napomenu i pokušaj ponovo.');
+  return full;
+}
+function getSendLog(x){return crmState(x).sent}
+function existingSent(x){
+  const entries=getSendLog(x);
+  for(const ch of WOLT_CHANNELS)if(entries[ch])return {date:entries[ch],channel:ch};
   return null;
 }
-
-const WOLT_WORK_RE=/\[WOLT_RAD\|START\|([^\]]{4,48})\]/i;
-function workStartedDate(x) {
-  const match=String(x.comment||'').match(WOLT_WORK_RE);
-  return match?String(match[1]||''):'';
-}
-
-function plainComment(x) {
-  let body=String(x.comment||''),match,i=0;
-  while((match=body.match(WOLT_SENT_RE))&&i++<6)body=body.slice(match[0].length);
-  return body.replace(WOLT_WORK_RE,'').trim();
-}
+function workStartedDate(x){return crmState(x).work}
+function plainComment(x){return crmState(x).note}
 function stampedContactLog(x,channel,date,comment,remove=false){
-  const entries=getSendLog(x);
-  if(channel){
-    if(remove)delete entries[channel];
-    else entries[channel]=date;
+  const state=crmState(x);
+  state.note=String(comment||'').trim();
+  if(channel){if(remove)delete state.sent[channel];else state.sent[channel]=date}
+  const hasSent=WOLT_CHANNELS.some(ch=>!!state.sent[ch]);
+  if(state.phase==='NEW' && hasSent){state.phase='SENT';state.at=date}
+  else if((state.phase==='SENT'||state.phase==='NO_REPLY')&&!hasSent){
+    state.phase='NEW';state.at=date;
   }
-  const marker=WOLT_CHANNELS.filter(k=>entries[k])
-    .map(k=>'[WOLT_POSLATO|'+k+'|'+entries[k]+']').join('');
-  const work=workStartedDate(x);
-  const workMarker=work?'[WOLT_RAD|START|'+work+']':'';
-  return (marker+workMarker+' '+String(comment||'').trim()).trim();
+  return crmPack(state);
 }
+function currentPhase(x){return crmState(x).phase}
 function contactAppearance(x){
-  const status=String(x.status||'NIJE POZVAN').toUpperCase();
-  if(['STOP','ODUSTAO','TEST'].includes(status))return 'optout';
-  const entries=getSendLog(x);
-  if(entries.WhatsApp||entries.Viber)return 'sent';
-  if(entries['E-mail'])return 'emailOnly';
-  return 'pending';
+  const phase=phaseDef(currentPhase(x));
+  return phase.tone==='declined'?'optout':
+    phase.tone==='active'?'sent':
+    phase.tone==='new'?'pending':
+    phase.tone==='waiting'?'emailOnly':'pending';
 }
-function contactSummary(x) {
-  const a=contactAppearance(x);
-  const entries=getSendLog(x);
-  if(a==='optout')return String(x.status||'STOP').toUpperCase();
-  if(a==='sent')return 'POSLATO · '+(entries.WhatsApp?'WhatsApp':'Viber');
-  if(a==='emailOnly')return 'POSLATO SAMO NA E-MAIL';
-  return 'NIJE POSLATO';
+function contactSummary(x){return phaseDef(currentPhase(x)).label}
+function phaseContactBlocked(x){
+  return ['DECLINED','STOP','ERROR'].includes(currentPhase(x)) ||
+    ['ODUSTAO','STOP','TEST'].includes(String(x.status||'').trim().toUpperCase());
 }
+function backendForPhase(phase){
+  if(phase==='DECLINED')return 'ODUSTAO';
+  if(phase==='STOP')return 'STOP';
+  if(phase==='ERROR')return 'GREŠKA';
+  if(phase==='NEW')return 'NIJE POZVAN';
+  if(['SENT','NO_REPLY'].includes(phase))return 'ČEKA ODGOVOR';
+  return 'ODGOVORIO';
+}
+function saveCRM(x,next,notice,success,cancel){
+  let comment;
+  try{comment=crmPack(next)}catch(e){
+    setNotice(notice,String(e.message||e));if(cancel)cancel();return;
+  }
+  const backendStatus=backendForPhase(next.phase);
+  const channel=String(x.channel||'');
+  setNotice(notice,'Čuvam status u Google evidenciji…');
+  google.script.run.withSuccessHandler(()=>{
+    setNotice(notice,success||'Status je sačuvan.');
+    refresh();
+  }).withFailureHandler(e=>{
+    setNotice(notice,'Greška pri čuvanju: '+String(e.message||e));
+    if(cancel)cancel();
+  }).saveCandidateStatus({
+    id:x.id,status:backendStatus,comment,
+    channel:channel,confirmed:false
+  });
+}
+
 function nowBelgrade(){
  return new Intl.DateTimeFormat('sr-RS',{
    timeZone:'Europe/Belgrade',year:'numeric',month:'2-digit',day:'2-digit',
