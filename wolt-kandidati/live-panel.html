@@ -110,10 +110,16 @@ main{padding:12px;max-width:900px}
 .templateEditorBody .templateHelp code{background:#234b59;border-radius:4px;padding:1px 4px;color:#d4ffef;white-space:nowrap}
 .templateEditorBody pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#081c2a;border:1px solid #35546b;border-radius:10px;padding:12px;font:13px/1.55 system-ui,Roboto,Arial,sans-serif;color:#e8f8ff;max-height:360px;overflow:auto;margin:8px 0}
 #messageTemplateStatus{min-height:20px;font-size:12px;color:#bcf8d9;margin-top:8px}
+
+.emailTemplateEditor textarea{min-height:360px}
+#emailEditor input{display:block;width:100%;background:#091c2c;color:#fff;border:1px solid #4a6c7e;border-radius:10px;margin:8px 0 10px;padding:11px 12px}
+#emailBodyInput{min-height:350px}
+#emailSubjectPreview{display:block;color:#d6efff;margin:7px 0 4px;overflow-wrap:anywhere}
+#emailBodyPreview{min-height:170px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.5.0</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.5.1</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
@@ -147,6 +153,27 @@ main{padding:12px;max-width:900px}
 <p class="templateHelp"><b>Pregled poruke</b> (sa prvim kandidatom iz spiska; prikaz nije slanje):</p>
 <pre id="messageTemplatePreview"></pre>
 <p class="templateHelp">Posle čuvanja tekst se automatski sinhronizuje u privatnoj Google tabeli, da ga koriste i telefon i računar. Uređaj čuva rezervnu lokalnu kopiju. Nijedna poruka se ne šalje bez tvog klika.</p>
+</div>
+</details>
+
+<details class="templateEditor" id="emailEditor">
+<summary>Naslov i tekst e-maila · izmeni</summary>
+<div class="templateEditorBody">
+<p class="templateHelp">Ovo je podrazumevani e-mail koji se priprema na klik. Menjaš naslov i ceo tekst, a kandidatovi podaci i registracioni link se sami umeću.</p>
+<label for="emailSubjectInput">Naslov e-maila</label>
+<input id="emailSubjectInput" type="text" maxlength="150" oninput="emailTemplateDirty=true;previewEmailTemplate()" placeholder="Naslov e-maila">
+<label for="emailBodyInput">Tekst e-maila</label>
+<textarea id="emailBodyInput" maxlength="1300" spellcheck="true" oninput="emailTemplateDirty=true;previewEmailTemplate()" placeholder="Tekst e-maila"></textarea>
+<p class="templateHelp">Promenljive: <code>{pozdrav}</code>, <code>{ime}</code>, <code>{grad}</code>, <code>{email}</code>, <code>{podaci}</code>, <code>{link}</code>. <code>{link}</code> je obavezan i automatski ubacuje naš Google Forms formular. Emoji podržani u Gmail-u i većini e-mail aplikacija; nacrt je običan tekst, ne HTML.</p>
+<div class="templateActions">
+<button type="button" onclick="saveEmailTemplate()">Sačuvaj naslov i poruku</button>
+<button type="button" class="secondary" onclick="resetEmailTemplate()">Vrati početni tekst</button>
+</div>
+<div id="emailTemplateStatus" aria-live="polite"></div>
+<p class="templateHelp"><b>Pregled nacrta (ništa nije poslato):</b></p>
+<div class="templateHelp"><strong id="emailSubjectPreview"></strong></div>
+<pre id="emailBodyPreview"></pre>
+<p class="templateHelp">Čuva se u privatnoj Google evidenciji, pa novi šablon važi i za telefon i za računar. Pošiljaoca biraš u otvorenoj e-mail aplikaciji pre slanja.</p>
 </div>
 </details>
 <section id="items"></section>
@@ -254,6 +281,88 @@ function initMessageTemplate(){
   document.getElementById('messageTemplateText').value=woltCurrentTemplate;
   previewMessageTemplate();
 }
+
+const WOLT_EMAIL_TEMPLATE_KEY='wolt_email_template_v1';
+const WOLT_DEFAULT_EMAIL_TEMPLATE={"subject":"🚴 Wolt dostava | Nastavi prijavu – BG Delivery","body":"{pozdrav}\n\n🚴 WOLT DOSTAVA — PRILIKA ZA FLEKSIBILAN POSAO\nHvala ti što si se prijavio/la preko našeg oglasa! Javljamo se iz BG Delivery da proverimo koja partnerska agencija odgovara tvom gradu i uslovima.\n\n{podaci}\n\n⏰ Fleksibilno radno vreme, u skladu sa uslovima partnerske agencije.\n💰 Mogućnost dodatne ili redovne zarade — zavisi od angažovanja i uslova saradnje.\n\n📝 NAJVAŽNIJE: POPUNI REGISTRACIONI FORMULAR\n{link}\n\n🔐 Pre nego što otvoriš link, prijavi se na svoj Google (Gmail) nalog u pregledaču. Tako ćeš lakše popuniti formular ako Google zatraži prijavu.\n📞 U formularu ostavi ispravan broj telefona. Na taj broj ćemo te kontaktirati u vezi sa sledećim koracima.\n\n📲 Ako se ne snađeš, instaliraj WhatsApp: https://www.whatsapp.com/download\nMožeš nam pisati na WhatsApp ili nas pozvati na 064/908-66-77.\n\n✅ Kada popuniš formular, odgovori na ovaj mejl sa GOTOVO.\n\nPozdrav,\nBG Delivery tim\n\nAko ne želiš dalji kontakt, odgovori STOP."};
+let woltEmailTemplate={...WOLT_DEFAULT_EMAIL_TEMPLATE};
+let emailTemplateDirty=false;
+let emailTemplateSaveInFlight=false;
+function validEmailTemplate(record){
+  if(!record || typeof record!=='object')return false;
+  if(typeof record.subject!=='string' || typeof record.body!=='string')return false;
+  const subj=record.subject.trim(),body=record.body.trim();
+  if(subj.length<5||subj.length>150||body.length<40||body.length>1300)return false;
+  if(!body.includes('{link}'))return false;
+  if(JSON.stringify({subject:subj,body}).length>1500)return false;
+  const unknown=[...(subj+'\n'+body).matchAll(/\{([^{}]+)\}/g)]
+    .map(m=>m[1]).filter(v=>!['pozdrav','ime','podaci','grad','email','link'].includes(v));
+  return !unknown.length;
+}
+function readEmailTemplate(){
+ try{
+  const text=localStorage.getItem(WOLT_EMAIL_TEMPLATE_KEY);
+  if(text){
+   const record=JSON.parse(text);
+   if(validEmailTemplate(record))return record;
+  }
+ }catch(e){}
+ return {...WOLT_DEFAULT_EMAIL_TEMPLATE};
+}
+function populateEmailEditor(){
+ const a=document.getElementById('emailSubjectInput'),b=document.getElementById('emailBodyInput');
+ if(a)a.value=woltEmailTemplate.subject;
+ if(b)b.value=woltEmailTemplate.body;
+ previewEmailTemplate();
+}
+function initEmailTemplate(){
+ woltEmailTemplate=readEmailTemplate();
+ populateEmailEditor();
+}
+function previewEmailTemplate(){
+ const candidate=all.length?all[0]:{name:'Primer Kandidata',city:'Beograd',email:'primer@example.com'};
+ const title=document.getElementById('emailSubjectInput')?.value||'';
+ const body=document.getElementById('emailBodyInput')?.value||'';
+ const destTitle=document.getElementById('emailSubjectPreview');
+ const destBody=document.getElementById('emailBodyPreview');
+ if(destTitle)destTitle.textContent=registrationMessage(candidate,title).replace(/\s+/g,' ');
+ if(destBody)destBody.textContent=registrationMessage(candidate,body);
+}
+function saveEmailTemplate(){
+ const input=document.getElementById('emailSubjectInput'),area=document.getElementById('emailBodyInput');
+ const status=document.getElementById('emailTemplateStatus');
+ if(!input||!area||!status)return;
+ const record={subject:input.value.trim(),body:area.value.trim()};
+ if(!validEmailTemplate(record)){
+  status.textContent='Proveri naslov i tekst (do 150/1300 znakova). Obavezno ostavi {link}. Dozvoljene su samo navedene promenljive.';
+  return;
+ }
+ woltEmailTemplate={...record};
+ emailTemplateDirty=false;
+ try{localStorage.setItem(WOLT_EMAIL_TEMPLATE_KEY,JSON.stringify(record))}catch(e){}
+ emailTemplateSaveInFlight=true;
+ status.textContent='Nacrt sačuvan na uređaju; sinhronizujem sa Google evidencijom…';
+ google.script.run.withSuccessHandler(()=>{
+  emailTemplateSaveInFlight=false;
+  status.textContent='SAČUVANO NA GOOGLE. Naslov i poruka važe i na telefonu i na računaru.';
+  loadKnowledge();
+ }).withFailureHandler(e=>{
+  emailTemplateSaveInFlight=false;
+  status.textContent='Sačuvano na ovom uređaju, ali Google sinhronizacija nije uspela: '+String(e.message||e);
+ }).addLearnedAnswer({
+   question:'WOLT_EMAIL_TEMPLATE_V1',
+   keywords:'__WOLT_EMAIL_TEMPLATE_SYSTEM__',
+   answer:JSON.stringify(record)
+ });
+ previewEmailTemplate();
+}
+function resetEmailTemplate(){
+ if(!window.confirm('Vrati početni naslov i tekst e-maila?'))return;
+ document.getElementById('emailSubjectInput').value=WOLT_DEFAULT_EMAIL_TEMPLATE.subject;
+ document.getElementById('emailBodyInput').value=WOLT_DEFAULT_EMAIL_TEMPLATE.body;
+ emailTemplateDirty=true;
+ saveEmailTemplate();
+}
+
 function candidateCity(x){
   const rawCity=String(x.city||'').trim();
   const extra=String(x.extraAnswer||'').trim();
@@ -327,7 +436,7 @@ function refresh(){
   applyCityBridge();
   refreshCounters();
   txt('status','Povezano · provereno '+new Date().toLocaleTimeString('sr-RS')+' · test '+data.stats.test+' izuzet');
-  document.getElementById('status').className='status';draw();previewMessageTemplate();
+  document.getElementById('status').className='status';draw();previewMessageTemplate();previewEmailTemplate();
   const leadFingerprint=all.map(x=>x.id).join('|');
   if(leadFingerprint!==previousLeadFingerprint){
     previousLeadFingerprint=leadFingerprint;
@@ -412,41 +521,11 @@ function canEmail(x){
   return !!candidateEmail(x) && !/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim());
 }
 function emailSubject(x){
-  return 'Wolt dostava – registracija i sledeći korak | BG Delivery';
+  const title=registrationMessage(x,woltEmailTemplate.subject).replace(/\s+/g,' ').trim();
+  return title||'Wolt dostava – registracija | BG Delivery';
 }
 function emailMessage(x){
-  const name=String(x.name||'').trim();
-  const city=candidateCity(x);
-  const email=candidateEmail(x);
-  const out=[
-    'Zdravo'+(name?', '+name:'')+'!',
-    '',
-    'Hvala na prijavi za posao Wolt dostavljača. Pišemo ti iz BG Delivery agencije povodom interesovanja za ovaj posao.',
-    ''
-  ];
-  if(city)out.push('Grad koji si naveo/la u prijavi: '+city+'.');
-  else out.push('U formularu ćeš moći da navedeš grad u kojem želiš da radiš.');
-  if(email)out.push('Kontaktiramo te na e-mail adresu '+email+' koju si naveo/la u prijavi.');
-  out.push(
-    '',
-    'Sarađujemo sa partnerskim agencijama i proveravamo odgovarajuću opciju prema tvom gradu i zahtevima.',
-    '',
-    'PRVI KORAK – POPUNI FORMULAR:',
-    REGISTRATION_URL,
-    '',
-    'Važno: U formularu obavezno ostavi ispravan broj mobilnog telefona. Kontaktiraćemo te na broj koji uneseš u toj formi u vezi sa sledećim koracima prijave.',
-    '',
-    'Ako još nemaš WhatsApp, možeš da ga preuzmeš ovde:',
-    'https://www.whatsapp.com/download',
-    '',
-    'Nakon popunjavanja možeš nam odgovoriti na ovaj mejl sa GOTOVO. Ako nešto nije jasno, slobodno pitaj.',
-    '',
-    'Srdačan pozdrav,',
-    'BG Delivery tim',
-    '',
-    'Ako više ne želiš da te kontaktiramo, odgovori STOP.'
-  );
-  return out.join('\r\n');
+  return registrationMessage(x,woltEmailTemplate.body).replace(/\r?\n/g,'\r\n');
 }
 function emailDraftUrl(x){
   return 'mailto:'+candidateEmail(x)+'?subject='+encodeURIComponent(emailSubject(x))
@@ -690,7 +769,24 @@ function loadKnowledge() {
     if(note && !note.textContent.includes('Sinhronizacija nije uspela'))
       note.textContent='Učitan zajednički tekst iz Google evidencije.';
   }
-  if(hasLoaded){draw();previewMessageTemplate();}
+  const emailEntries=(data.answers||[]).filter(a=>a.question==='WOLT_EMAIL_TEMPLATE_V1' &&
+    String(a.keywords||'').includes('__WOLT_EMAIL_TEMPLATE_SYSTEM__'));
+  if(!emailTemplateDirty && !emailTemplateSaveInFlight && emailEntries.length){
+    try{
+      const remote=JSON.parse(emailEntries[emailEntries.length-1].answer||'{}');
+      if(validEmailTemplate(remote)){
+        woltEmailTemplate=remote;
+        try{localStorage.setItem(WOLT_EMAIL_TEMPLATE_KEY,JSON.stringify(remote))}catch(e){}
+        populateEmailEditor();
+        const status=document.getElementById('emailTemplateStatus');
+        if(status)status.textContent='Učitan zajednički e-mail šablon iz Google evidencije.';
+      }
+    }catch(e){
+      const status=document.getElementById('emailTemplateStatus');
+      if(status)status.textContent='Ne mogu da pročitam prethodno sačuvan e-mail šablon.';
+    }
+  }
+  if(hasLoaded){draw();previewMessageTemplate();previewEmailTemplate();}
   const list=document.getElementById('msgTemplates');
   list.replaceChildren();
   for(const msg of data.messages||[]){
@@ -703,7 +799,7 @@ function loadKnowledge() {
   const learned=document.getElementById('learned');
   learned.replaceChildren();
   const title=document.createElement('p');
-  title.textContent='Pitanja u bazi: '+(data.answers||[]).filter(a=>a.question!=='WOLT_TEMPLATE_MESSAGE_V1').length;
+  title.textContent='Pitanja u bazi: '+(data.answers||[]).filter(a=>!['WOLT_TEMPLATE_MESSAGE_V1','WOLT_EMAIL_TEMPLATE_V1'].includes(a.question)).length;
   learned.append(title);
  }).withFailureHandler(e=>{document.getElementById('msgTemplates').textContent='Greška: '+String(e.message||e)}).getAutomationSetup();
 }
@@ -740,7 +836,7 @@ function saveCardStatus(x,card) {
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
 setInterval(()=>{if(!document.hidden)refresh()},30000);
-initMessageTemplate();refresh();
+initMessageTemplate();initEmailTemplate();refresh();
 </script>
 </body>
 </html>
