@@ -23,6 +23,7 @@ input{border:1px solid #406174;background:#102438;color:#fff;padding:12px;width:
 .badge.pending{background:#692127;color:#ffd7dc;border:1px solid #ad414d;font-weight:800}
 .stats .stat:nth-child(2){background:#391e2a;border-color:#803847}.stats .stat:nth-child(2) .num{color:#ff7884}.stats .stat:nth-child(2) .tag{color:#ffd0d5}
 .badge.sent{background:#176044;color:#d5ffe5;border:1px solid #2a9566;font-weight:800}
+.badge.emailOnly{background:#6b541c;color:#fff0bb;border:1px solid #bfa043;font-weight:800}
 .badge.optout{background:#6b3434;color:#ffe1e1;border:1px solid #a65757}
 .error{background:#59262b;color:#ffdddd}
 footer{font-size:12px;color:#9ab2c2;padding:15px;line-height:1.4}
@@ -51,7 +52,10 @@ body{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
 .appHeader{padding:13px 15px}
 main{padding:12px;max-width:900px}
 .status{font-size:12px;margin-bottom:10px;padding:10px}
-.stats{gap:7px}.stat{padding:10px 5px}.num{font-size:23px}
+.stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.stat{padding:10px 5px}.num{font-size:23px}
+.stats .stat:nth-child(3){background:#40371f;border-color:#806b30}.stats .stat:nth-child(3) .num{color:#ffdc71}.stats .stat:nth-child(3) .tag{color:#ffe8ac}
+.stats .stat:nth-child(4){background:#173d30;border-color:#276949}.stats .stat:nth-child(4) .num{color:#91e2b5}
+@media(max-width:580px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .contactToolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .contactToolbar input{flex:1 1 200px;min-width:0;margin:0}
 .contactToolbar select{border-radius:10px;background:#102438;color:#fff;border:1px solid #406174;padding:10px;min-height:43px;flex:0 1 165px}
@@ -70,6 +74,11 @@ main{padding:12px;max-width:900px}
 .contactButtons button{min-height:48px;font-size:15px;padding:8px 9px}
 .contactButtons .waButton{background:#1ebd72;color:#061e15}
 .contactButtons .viberButton{background:#7360ba;color:#fff}
+.contactButtons .emailButton{background:#3283b9;color:#fff;grid-column:1/-1}
+.contactButtons .gmailFallback{min-height:35px;font-size:12px;grid-column:1/-1;background:#24435b;color:#d9f1ff}
+.mailSentCheck{display:flex;align-items:center;gap:9px;background:#4d3f24;color:#ffebb9;border:1px solid #8c743c;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:750}
+.mailSentCheck input{width:18px;height:18px;min-height:18px;margin:0;accent-color:#e7b946;flex:0 0 auto}
+.contactDates{color:#a8cbda;font-size:12px;white-space:pre-wrap;line-height:1.45;margin-top:9px}
 .contactButtons button:disabled{opacity:.48;cursor:not-allowed}
 .contactFoot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:9px}
 .contactFoot button{min-height:37px;background:#244658;color:#e4f5fa;font-size:12px;padding:7px 10px;flex:1}
@@ -104,19 +113,20 @@ main{padding:12px;max-width:900px}
 </style>
 </head>
 <body>
-<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.4.5</strong><span>UI auto-ažuriranje</span></div></header>
+<header class="appHeader"><div><h1>Wolt Kandidati — uživo</h1><small>Meta → WOLT AUTO · privatni Google panel</small></div><div class="versionPanel" aria-label="Verzija web aplikacije"><strong>WEB v1.5.0</strong><span>UI auto-ažuriranje</span></div></header>
 <main>
 <div id="status" class="status">Povezujem sa Google tabelom…</div>
 
 <div class="stats">
  <div class="stat"><div class="num" id="total">–</div><div class="tag">Kandidati</div></div>
- <div class="stat"><div class="num" id="new">–</div><div class="tag">Nije pozvan</div></div>
- <div class="stat"><div class="num" id="contacted">–</div><div class="tag">Pozvan</div></div>
+ <div class="stat"><div class="num" id="new">–</div><div class="tag">Nije poslato</div></div>
+ <div class="stat"><div class="num" id="emailOnly">–</div><div class="tag">Samo e-mail</div></div>
+ <div class="stat"><div class="num" id="contacted">–</div><div class="tag">WhatsApp/Viber</div></div>
 </div>
 <div class="contactToolbar">
 <input id="filter" type="search" placeholder="Ime, telefon, grad, e-mail…" oninput="draw()" autocomplete="off">
 <select id="contactFilter" aria-label="Filter kandidata" onchange="draw()">
-<option value="all">Svi kandidati</option><option value="need">Za kontakt</option><option value="contacted">Poslato / Kontaktirani</option><option value="stop">STOP / Odustao</option>
+<option value="all">Svi kandidati</option><option value="need">Nije poslato</option><option value="email">Samo e-mail</option><option value="contacted">WhatsApp / Viber poslato</option><option value="stop">STOP / Odustao</option>
 </select>
 <button type="button" class="secondary" style="flex:0 0 auto;min-height:43px" onclick="refresh()">↻ Osveži</button>
 </div>
@@ -315,8 +325,7 @@ function refresh(){
  google.script.run.withSuccessHandler(data=>{
   loading=false;hasLoaded=true;all=data.candidates||[];
   applyCityBridge();
-  txt('total',data.stats.total);txt('new',data.stats.new);
-  txt('contacted',data.stats.contacted);
+  refreshCounters();
   txt('status','Povezano · provereno '+new Date().toLocaleTimeString('sr-RS')+' · test '+data.stats.test+' izuzet');
   document.getElementById('status').className='status';draw();previewMessageTemplate();
   const leadFingerprint=all.map(x=>x.id).join('|');
@@ -330,17 +339,60 @@ function refresh(){
  }).getOverview();
 }
 
-const WOLT_SENT_RE=/^\[WOLT_POSLATO\|(WhatsApp|Viber)\|([^\]]+)\]\s*/i;
-function existingSent(x){
- const match=String(x.comment||'').match(WOLT_SENT_RE);
- const date=String(x.sentAt||match?.[2]||'').trim();
- const channel=String(x.sentChannel||match?.[1]||x.channel||'').trim();
- return date?{date,channel}:null;
+
+const WOLT_SENT_RE=/^\[WOLT_POSLATO\|(WhatsApp|Viber|E-mail)\|([^\]]+)\]\s*/i;
+const WOLT_CHANNELS=['WhatsApp','Viber','E-mail'];
+function getSendLog(x) {
+  let body=String(x.comment||'');
+  const entries={};
+  let i=0,match;
+  while((match=body.match(WOLT_SENT_RE))&&i++<6){
+    entries[match[1]]=match[2];
+    body=body.slice(match[0].length);
+  }
+  // Backwards compatibility for rows created by older versions of the panel.
+  // Ignore backend 'Drugo' timestamp: it can mean email or another type of contact.
+  const channel=String(x.sentChannel||x.channel||'');
+  if((channel==='WhatsApp'||channel==='Viber')&&x.sentAt&&!entries[channel])entries[channel]=String(x.sentAt);
+  return entries;
 }
-function plainComment(x){return String(x.comment||'').replace(WOLT_SENT_RE,'').trim()}
-function stampedComment(channel,date,comment){
- const clean=String(comment||'').replace(WOLT_SENT_RE,'').trim();
- return '[WOLT_POSLATO|'+channel+'|'+date+'] '+clean;
+function existingSent(x) {
+  const entries=getSendLog(x);
+  for(const key of ['WhatsApp','Viber','E-mail']){
+    if(entries[key])return {date:entries[key],channel:key};
+  }
+  return null;
+}
+function plainComment(x) {
+  let body=String(x.comment||''),match,i=0;
+  while((match=body.match(WOLT_SENT_RE))&&i++<6)body=body.slice(match[0].length);
+  return body.trim();
+}
+function stampedContactLog(x,channel,date,comment,remove=false){
+  const entries=getSendLog(x);
+  if(channel){
+    if(remove)delete entries[channel];
+    else entries[channel]=date;
+  }
+  const marker=WOLT_CHANNELS.filter(k=>entries[k])
+    .map(k=>'[WOLT_POSLATO|'+k+'|'+entries[k]+']').join('');
+  return (marker+' '+String(comment||'').trim()).trim();
+}
+function contactAppearance(x){
+  const status=String(x.status||'NIJE POZVAN').toUpperCase();
+  if(['STOP','ODUSTAO','TEST'].includes(status))return 'optout';
+  const entries=getSendLog(x);
+  if(entries.WhatsApp||entries.Viber)return 'sent';
+  if(entries['E-mail'])return 'emailOnly';
+  return 'pending';
+}
+function contactSummary(x) {
+  const a=contactAppearance(x);
+  const entries=getSendLog(x);
+  if(a==='optout')return String(x.status||'STOP').toUpperCase();
+  if(a==='sent')return 'POSLATO · '+(entries.WhatsApp?'WhatsApp':'Viber');
+  if(a==='emailOnly')return 'POSLATO SAMO NA E-MAIL';
+  return 'NIJE POSLATO';
 }
 function nowBelgrade(){
  return new Intl.DateTimeFormat('sr-RS',{
@@ -349,6 +401,71 @@ function nowBelgrade(){
  }).format(new Date());
 }
 
+function refreshCounters(){
+  const active=all.filter(x=>contactAppearance(x)!=='optout');
+  txt('total',all.length);
+  txt('new',active.filter(x=>contactAppearance(x)==='pending').length);
+  txt('emailOnly',active.filter(x=>contactAppearance(x)==='emailOnly').length);
+  txt('contacted',active.filter(x=>contactAppearance(x)==='sent').length);
+}
+function canEmail(x){
+  return !!candidateEmail(x) && !/^(STOP|ODUSTAO|TEST)$/i.test(String(x.status||'').trim());
+}
+function emailSubject(x){
+  return 'Wolt dostava – registracija i sledeći korak | BG Delivery';
+}
+function emailMessage(x){
+  const name=String(x.name||'').trim();
+  const city=candidateCity(x);
+  const email=candidateEmail(x);
+  const out=[
+    'Zdravo'+(name?', '+name:'')+'!',
+    '',
+    'Hvala na prijavi za posao Wolt dostavljača. Pišemo ti iz BG Delivery agencije povodom interesovanja za ovaj posao.',
+    ''
+  ];
+  if(city)out.push('Grad koji si naveo/la u prijavi: '+city+'.');
+  else out.push('U formularu ćeš moći da navedeš grad u kojem želiš da radiš.');
+  if(email)out.push('Kontaktiramo te na e-mail adresu '+email+' koju si naveo/la u prijavi.');
+  out.push(
+    '',
+    'Saradjujemo sa partnerskim agencijama i proveravamo odgovarajuću opciju prema tvom gradu i zahtevima.',
+    '',
+    'PRVI KORAK – POPUNI FORMULAR:',
+    REGISTRATION_URL,
+    '',
+    'Važno: U formularu obavezno ostavi ispravan broj mobilnog telefona. Kontaktiraćemo te na broj koji uneseš u toj formi u vezi sa sledećim koracima prijave.',
+    '',
+    'Ako još nemaš WhatsApp, možeš da ga preuzmeš ovde:',
+    'https://www.whatsapp.com/download',
+    '',
+    'Nakon popunjavanja možeš nam odgovoriti na ovaj mejl sa GOTOVO. Ako nešto nije jasno, slobodno pitaj.',
+    '',
+    'Srdačan pozdrav,',
+    'BG Delivery tim',
+    '',
+    'Ako više ne želiš da te kontaktiramo, odgovori STOP.'
+  );
+  return out.join('\r\n');
+}
+function emailDraftUrl(x){
+  return 'mailto:'+candidateEmail(x)+'?subject='+encodeURIComponent(emailSubject(x))
+    +'&body='+encodeURIComponent(emailMessage(x));
+}
+function openCandidateEmail(x,notice){
+  if(!canEmail(x)){setNotice(notice,'Nema ispravnog e-maila ili kandidat ne želi dalji kontakt.');return}
+  const prev=getSendLog(x)['E-mail'];
+  if(prev&&!window.confirm('Za ovog kandidata već postoji potvrđen e-mail od '+prev+'. Otvori ponovo?'))return;
+  setNotice(notice,'Otvaram e-mail aplikaciju sa spremnim naslovom i porukom. U Gmail-u izaberi nalog u polju Od/From, proveri tekst i pritisni Pošalji. Još NIJE označeno kao poslato.');
+  window.location.href=emailDraftUrl(x);
+}
+function openCandidateGmail(x,notice){
+  if(!canEmail(x)){setNotice(notice,'Nedostaje e-mail adresa.');return}
+  const link='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(candidateEmail(x))
+     +'&su='+encodeURIComponent(emailSubject(x))+'&body='+encodeURIComponent(emailMessage(x));
+  setNotice(notice,'Otvoren je Gmail nacrt. Izaberi nalog pošiljaoca i pritisni Pošalji. Nije automatski poslato.');
+  window.open(link,'_blank','noopener,noreferrer');
+}
 function contactPhone(raw){
  let digits=String(raw||'').replace(/\D/g,'');
  if(digits.startsWith('00381')) digits=digits.slice(2);
@@ -391,18 +508,43 @@ function openCandidateViber(x,notice){
    setNotice(notice,'Kopiranje nije uspelo. Kopiraj tekst iz šablona u odeljku Registracioni link i pošalji ga ručno u Viberu.');
  });
 }
-function markManualContact(x,channel,notice){
- if(!canContact(x)){setNotice(notice,'Nije dozvoljeno kontaktiranje ovog kandidata.');return}
- if(!window.confirm('Da li si ZAISTA poslao poruku preko '+channel+'? Sačuvaćemo datum i vreme tvoje potvrde. Ovo nije potvrda isporuke od WhatsApp/Viber-a.'))return;
- const when=nowBelgrade();
- setNotice(notice,'Upisujem potvrdu u privatnu evidenciju…');
- google.script.run.withSuccessHandler(result=>{
-   const time=result&&result.sentAt?result.sentAt:when;
-   setNotice(notice,'POSLATO · '+channel+' · '+time+' — ručno potvrđeno. Osvežavam spisak…');
-   refresh();
- }).withFailureHandler(e=>setNotice(notice,'Greška: '+String(e.message||e)))
- .saveCandidateStatus({id:x.id,status:'POZVAN',comment:stampedComment(channel,when,plainComment(x)),channel:channel,confirmed:true});
+function writeManualChannel(x,channel,mark,notice,onCanceled) {
+  const allowed=channel==='E-mail'?canEmail(x):canContact(x);
+  if(!allowed){setNotice(notice,'Kontaktiranje nije dozvoljeno ili nedostaju podaci.');if(onCanceled)onCanceled();return}
+  const logged=getSendLog(x);
+  const prior=logged[channel];
+  const question=mark
+   ?'Da li si ZAISTA poslao/la '+(channel==='E-mail'?'mejl':'poruku preko '+channel)+'? Sačuvaćemo tvoju potvrdu i datum, ali ne tvrdimo da je isporuka potvrđena.'
+   :'Ukloniti oznaku "Poslato na e-mail" iz evidencije za ovog kandidata?';
+  if(!window.confirm(question)){if(onCanceled)onCanceled();return}
+  const when=nowBelgrade();
+  const newLog=Object.assign({},logged);
+  if(mark)newLog[channel]=when;else delete newLog[channel];
+  const comment=stampedContactLog(x,channel,when,plainComment(x),!mark);
+  if(comment.length>700){
+    setNotice(notice,'Komentar je predugačak za bezbedno čuvanje statusa. Skrati komentar u detaljima kandidata pa pokušaj ponovo.');
+    if(onCanceled)onCanceled();return;
+  }
+  const liveChannel=newLog.WhatsApp?'WhatsApp':newLog.Viber?'Viber':newLog['E-mail']?'Drugo':'';
+  const wasContacted=String(x.status||'').toUpperCase()==='POZVAN';
+  const status=liveChannel?'POZVAN':(wasContacted?'NIJE POZVAN':(x.status||'NIJE POZVAN'));
+  const confirmed=status==='POZVAN';
+  const providerChannel=channel==='E-mail'?'Drugo':channel;
+  // Preserve sender-independent evidence in the comment. The old Apps Script
+  // accepts WhatsApp / Viber / Drugo but not "E-mail" as a channel.
+  setNotice(notice,'Čuvam status i vreme u privatnoj Google evidenciji…');
+  google.script.run.withSuccessHandler(()=>{
+    setNotice(notice,(mark?'Sačuvano: '+channel+' · '+when:'Uklonjena potvrda slanja e-maila')+
+      '. Osvežavam spisak…');
+    refresh();
+  }).withFailureHandler(e=>{
+    setNotice(notice,'Čuvanje nije uspelo: '+String(e.message||e));
+    if(onCanceled)onCanceled();
+  }).saveCandidateStatus({id:x.id,status,comment,
+      channel:confirmed?(liveChannel||providerChannel):'',
+      confirmed});
 }
+function markManualContact(x,channel,notice){writeManualChannel(x,channel,true,notice)}
 function makeLine(label,value,isLink,href){
  const wrap=document.createElement('div'),caption=document.createElement('strong');
  caption.textContent=label;wrap.append(caption);
@@ -417,11 +559,11 @@ function draw(){
  const mode=document.getElementById('contactFilter').value;
  const filtered=all.filter(x=>{
    const state=String(x.status||'NIJE POZVAN').toUpperCase();
-   const isDone=['POZVAN','ODGOVORIO','ČEKA ODGOVOR'].includes(state);
-   const isStopped=['STOP','ODUSTAO','TEST'].includes(state);
-   if(mode==='need' && (isDone||isStopped)) return false;
-   if(mode==='contacted' && !isDone) return false;
-   if(mode==='stop' && !isStopped) return false;
+   const appearance=contactAppearance(x);
+   if(mode==='need' && appearance!=='pending') return false;
+   if(mode==='email' && appearance!=='emailOnly') return false;
+   if(mode==='contacted' && appearance!=='sent') return false;
+   if(mode==='stop' && appearance!=='optout') return false;
    return [x.name,x.phone,x.email,x.city,x.address,x.extraAnswer].join(' ').toLocaleLowerCase('sr').includes(q);
  });
  document.getElementById('listHint').textContent='Prikazano '+filtered.length+' od '+all.length+' kandidata · nove prijave se proveravaju na 30 sekundi dok je panel otvoren.';
@@ -436,15 +578,10 @@ function draw(){
    const label=document.createElement('div');
    const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
    const flag=document.createElement('span');flag.className='badge';
-   const sent=existingSent(x);
-   const hasSend=!!sent && /^(WhatsApp|Viber)$/i.test(sent.channel);
-   flag.textContent=((x.status==='POZVAN'&&hasSend)?'POSLATO · '+sent.channel:
-     (x.status==='POZVAN'?'KONTAKTIRAN':(x.status||'NIJE POZVAN')))+
-     (x.reapplicant?' · PONOVNA PRIJAVA':'');
-   const statusUpper=String(x.status||'NIJE POZVAN').trim().toUpperCase();
-   if(statusUpper==='NIJE POZVAN')flag.classList.add('pending');
-   else if(statusUpper==='STOP'||statusUpper==='ODUSTAO')flag.classList.add('optout');
-   else if(hasSend&&statusUpper==='POZVAN')flag.classList.add('sent');
+   const logs=getSendLog(x);
+   const appearance=contactAppearance(x);
+   flag.textContent=contactSummary(x)+(x.reapplicant?' · PONOVNA PRIJAVA':'');
+   flag.classList.add(appearance);
    label.append(name,flag);
    const date=document.createElement('div');date.className='contactDate';date.textContent='Lead: '+(x.dateLabel||fmt(x.date)||'Datum nije dostupan');
    head.append(label,date);
@@ -456,21 +593,34 @@ function draw(){
      makeLine('E-mail',x.email||'',!!x.email,x.email?'mailto:'+x.email:''),
      makeLine('Adresa',x.address||'',false,''),
      makeLine('Datum prijave',x.dateLabel||x.date||'Nije dostavljen',false,''),
-     makeLine('Ručna potvrda slanja',sent ? (sent.date+' · '+(sent.channel||'kanal nije naveden')) : 'Nije evidentirano',false,'')
+     makeLine('E-mail poslat',logs['E-mail']||'Nije evidentirano',false,''),
+     makeLine('WhatsApp / Viber',logs.WhatsApp?('WhatsApp: '+logs.WhatsApp):logs.Viber?('Viber: '+logs.Viber):'Nije evidentirano',false,'')
    );
    const buttons=document.createElement('div');buttons.className='contactButtons';
    const wa=document.createElement('button');wa.className='waButton';wa.textContent='WhatsApp';wa.disabled=!canContact(x);
    const vi=document.createElement('button');vi.className='viberButton';vi.textContent='Viber';vi.disabled=!canContact(x);
+   const em=document.createElement('button');em.className='emailButton';em.textContent='E-mail · pripremi poruku';em.disabled=!canEmail(x);
+   const gmail=document.createElement('button');gmail.className='gmailFallback';gmail.textContent='Ako nema e-mail aplikacije: Gmail u pregledaču';gmail.disabled=!canEmail(x);
    const notice=document.createElement('div');notice.className='contactNotice';notice.setAttribute('aria-live','polite');
    wa.addEventListener('click',()=>openCandidateWhatsApp(x,notice));
    vi.addEventListener('click',()=>openCandidateViber(x,notice));
-   buttons.append(wa,vi);
+   em.addEventListener('click',()=>openCandidateEmail(x,notice));
+   gmail.addEventListener('click',()=>openCandidateGmail(x,notice));
+   buttons.append(wa,vi,em,gmail);
    const foot=document.createElement('div');foot.className='contactFoot';
    const sentWa=document.createElement('button');sentWa.className='markSent';sentWa.textContent='✓ Potvrdi slanje WA';sentWa.disabled=!canContact(x);
    const sentViber=document.createElement('button');sentViber.className='markSent';sentViber.textContent='✓ Potvrdi slanje Viber';sentViber.disabled=!canContact(x);
    sentWa.addEventListener('click',()=>markManualContact(x,'WhatsApp',notice));
    sentViber.addEventListener('click',()=>markManualContact(x,'Viber',notice));
    foot.append(sentWa,sentViber);
+   const emailCheck=document.createElement('label');emailCheck.className='mailSentCheck';
+   const boxEmail=document.createElement('input');boxEmail.type='checkbox';boxEmail.checked=!!logs['E-mail'];boxEmail.disabled=!canEmail(x);
+   const emailCheckText=document.createElement('span');emailCheckText.textContent=logs['E-mail']?'E-mail poslat: '+logs['E-mail']:'Označi: e-mail poslat';
+   boxEmail.addEventListener('change',()=>{
+     boxEmail.disabled=true;
+     writeManualChannel(x,'E-mail',boxEmail.checked,notice,()=>{boxEmail.checked=!boxEmail.checked;boxEmail.disabled=false;});
+   });
+   emailCheck.append(boxEmail,emailCheckText);
    const details=document.createElement('details');
    const summary=document.createElement('summary');summary.textContent='Detalji i promena statusa';
    const meta=document.createElement('div');meta.className='meta';
@@ -496,7 +646,7 @@ function draw(){
    edit.append(choices,channel,memo,save,saveNotice);
    save.addEventListener('click',()=>saveCardStatus(x,edit));
    details.append(summary,meta,edit);
-   box.append(head,info,buttons,foot,notice,details);
+   box.append(head,info,buttons,foot,emailCheck,notice,details);
    frag.append(box);
  }
  list.append(frag);
@@ -574,8 +724,7 @@ function learn() {
 function saveCardStatus(x,card) {
  const status=card.querySelector('select').value;
  const commentUser=card.querySelector('textarea').value.trim();
- const previous=existingSent(x);
- const comment=previous?stampedComment(previous.channel,previous.date,commentUser):commentUser;
+ const comment=stampedContactLog(x,null,'',commentUser);
  const channel=card.querySelector('.contactChannel').value;
  const notice=card.querySelector('.saveNotice');
  let confirmed=false;
