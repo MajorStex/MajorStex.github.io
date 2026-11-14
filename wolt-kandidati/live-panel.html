@@ -158,6 +158,15 @@ main{padding:12px;max-width:900px}
 .deliveryNone{font-size:11px;color:#ffc6cd}
 .statusEditor.busy{opacity:.65;pointer-events:none}
 
+
+.phaseShortcuts{display:flex;gap:6px;flex-wrap:wrap;margin:9px 0}
+.phaseQuick{font-size:11px;min-height:36px;border-radius:8px;padding:7px 9px;background:#25475d;color:#e8f5fd}
+.phaseQuick.answered{background:#21526b}
+.phaseQuick.review{background:#33466e}
+.phaseQuick.wolt{background:#403b77}
+.phaseQuick.decline{background:#9f2534;color:white;font-weight:800}
+.phaseQuick:disabled{opacity:.45;cursor:not-allowed}
+
 </style>
 </head>
 <body>
@@ -929,7 +938,20 @@ function draw(){
      const mark=document.createElement('span');mark.className='deliveryMark'+(ch==='E-mail'?' email':'');
      mark.textContent='Poslato '+ch+' · '+logs[ch];deliveries.append(mark);
    }
-   workflow.append(stageCaption,stageRow,stageInfo,deliveries,stageNotice);
+   const shortcuts=document.createElement('div');shortcuts.className='phaseShortcuts';
+   for(const [value,label,style] of [
+     ['INTERESTED','Odgovorio','answered'],
+     ['REVIEW','U obradi','review'],
+     ['WOLT_APP','U Wolt aplikaciji','wolt'],
+     ['DECLINED','Ne želi da radi','decline']
+   ]){
+     const quick=document.createElement('button');
+     quick.type='button';quick.textContent=label;quick.className='phaseQuick '+style;
+     quick.disabled=state.phase===value;
+     quick.addEventListener('click',()=>saveWorkflowStatus(x,value,stageNotice,quick));
+     shortcuts.append(quick);
+   }
+   workflow.append(stageCaption,stageRow,shortcuts,stageInfo,deliveries,stageNotice);
    const info=document.createElement('div');info.className='contactInfo';
    const number=contactPhone(x.phone);
    info.append(
