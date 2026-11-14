@@ -862,13 +862,18 @@ function draw(){
  const q=document.getElementById('filter').value.trim().toLocaleLowerCase('sr');
  const mode=document.getElementById('contactFilter').value;
  const filtered=all.filter(x=>{
-   const state=String(x.status||'NIJE POZVAN').toUpperCase();
-   const appearance=contactAppearance(x);
-   if(mode==='need' && appearance!=='pending') return false;
-   if(mode==='email' && appearance!=='emailOnly') return false;
-   if(mode==='contacted' && appearance!=='sent') return false;
-   if(mode==='started' && !workStartedDate(x)) return false;
-   if(mode==='stop' && appearance!=='optout') return false;
+   const phase=currentPhase(x),sent=getSendLog(x);
+   const hasWA=!!(sent.WhatsApp||sent.Viber);
+   if(mode==='need' && phase!=='NEW')return false;
+   if(mode==='awaiting' && !['SENT','NO_REPLY'].includes(phase))return false;
+   if(mode==='interested' && !['INTERESTED','LATER'].includes(phase))return false;
+   if(mode==='processing' && !['FORM_WAIT','FORM_DONE','REVIEW','WOLT_APPROVED','INTRO','DOCS','AGENCY','EQUIPMENT'].includes(phase))return false;
+   if(mode==='wolt' && !['WOLT_APP','WOLT_APPROVED','ACTIVE'].includes(phase))return false;
+   if(mode==='started' && phase!=='WORKING')return false;
+   if(mode==='declined' && phase!=='DECLINED')return false;
+   if(mode==='stop' && phase!=='STOP')return false;
+   if(mode==='email' && !sent['E-mail'])return false;
+   if(mode==='contacted' && !hasWA)return false;
    return [x.name,x.phone,x.email,x.city,x.address,x.extraAnswer].join(' ').toLocaleLowerCase('sr').includes(q);
  });
  document.getElementById('listHint').textContent='Prikazano '+filtered.length+' od '+all.length+' kandidata · nove prijave se proveravaju na 30 sekundi dok je panel otvoren.';
@@ -884,16 +889,45 @@ function draw(){
    const name=document.createElement('div');name.className='name';name.textContent=x.name||'Bez imena';
    const flag=document.createElement('span');flag.className='badge';
    const logs=getSendLog(x);
-   const appearance=contactAppearance(x);
+   const state=crmState(x),stage=phaseDef(state.phase);
    flag.textContent=contactSummary(x)+(x.reapplicant?' · PONOVNA PRIJAVA':'');
-   flag.classList.add(appearance);
+   flag.classList.add('phase-'+stage.tone);
+   if(stage.tone==='declined')box.classList.add('crmDeclined');
    label.append(name,flag);
-   if(workStartedDate(x)){
-     const badge=document.createElement('span');badge.className='workBadge';badge.textContent='POČEO DA RADI';
-     label.append(badge);
+   if(state.work && state.phase!=='WORKING'){
+     const work= document.createElement('span');work.className='workBadge';
+     work.textContent='Ranije počeo rad: '+state.work;label.append(work);
    }
    const date=document.createElement('div');date.className='contactDate';date.textContent='Lead: '+(x.dateLabel||fmt(x.date)||'Datum nije dostupan');
    head.append(label,date);
+   const workflow=document.createElement('div');workflow.className='statusEditor';
+   const stageCaption=document.createElement('label');
+   stageCaption.textContent='FAZA KANDIDATA — ovo je glavni status, nije potvrda slanja';
+   const stageRow=document.createElement('div');stageRow.className='statusRow';
+   const stageSelect=document.createElement('select');stageSelect.setAttribute('aria-label','Faza prijave kandidata');
+   for(const phase of WOLT_PHASES){
+     const op=document.createElement('option');op.value=phase.id;op.textContent=phase.label;stageSelect.append(op);
+   }
+   stageSelect.value=state.phase;
+   const stageSave=document.createElement('button');stageSave.type='button';stageSave.textContent='Sačuvaj';
+   const stageNotice=document.createElement('div');stageNotice.className='contactNotice';stageNotice.setAttribute('aria-live','polite');
+   stageSelect.addEventListener('change',()=>{stageSave.textContent=stageSelect.value===state.phase?'Sačuvano':'Sačuvaj status'});
+   stageSave.addEventListener('click',()=>{
+     saveWorkflowStatus(x,stageSelect.value,stageNotice,stageSave,()=>{stageSelect.value=state.phase;stageSave.textContent='Sačuvaj';});
+   });
+   stageRow.append(stageSelect,stageSave);
+   const stageInfo=document.createElement('div');stageInfo.className='statusMeta';
+   stageInfo.textContent=state.at?'Poslednja izmena statusa: '+state.at:'Početna faza: nova prijava; status nije još ručno menjan';
+   const deliveries=document.createElement('div');deliveries.className='deliveryList';
+   const found=WOLT_CHANNELS.filter(ch=>logs[ch]);
+   if(!found.length){
+     const no=document.createElement('span');no.className='deliveryNone';no.textContent='Nema potvrđenog slanja poruka';
+     deliveries.append(no);
+   }else for(const ch of found){
+     const mark=document.createElement('span');mark.className='deliveryMark'+(ch==='E-mail'?' email':'');
+     mark.textContent='Poslato '+ch+' · '+logs[ch];deliveries.append(mark);
+   }
+   workflow.append(stageCaption,stageRow,stageInfo,deliveries,stageNotice);
    const info=document.createElement('div');info.className='contactInfo';
    const number=contactPhone(x.phone);
    info.append(
@@ -943,31 +977,24 @@ function draw(){
      saveWorkStarted(x,workBox.checked,notice,()=>{workBox.checked=!workBox.checked;workBox.disabled=false;});
    });
    const details=document.createElement('details');
-   const summary=document.createElement('summary');summary.textContent='Detalji i promena statusa';
+   const summary=document.createElement('summary');summary.textContent='Komentar i detalji prijave';
    const meta=document.createElement('div');meta.className='meta';
-   meta.textContent='Datum prijave: '+(x.dateLabel||x.date||'—')+
+   meta.textContent='Datum Meta prijave: '+(x.dateLabel||x.date||'—')+
        (x.extraAnswer?'\nDodatni odgovor iz Meta forme: '+x.extraAnswer:'')+
        (x.campaign?'\nKampanja: '+x.campaign:'')+
-       (x.formName?'\nForma: '+x.formName:'');
+       (x.formName?'\nForma: '+x.formName:'')+
+       (state.at?'\nPoslednja izmena faze: '+state.at:'');
    meta.style.whiteSpace='pre-wrap';
    const edit=document.createElement('div');edit.className='panel';
-   const choices=document.createElement('select');choices.setAttribute('aria-label','Status kandidata');
-   for(const v of ['NIJE POZVAN','POZVAN','ODGOVORIO','ČEKA ODGOVOR','ODUSTAO','STOP','GREŠKA']){
-     const o=document.createElement('option');o.value=v;o.textContent=v;choices.append(o);
-   }
-   choices.value=[...choices.options].some(o=>o.value===x.status)?x.status:'NIJE POZVAN';
-   const channel=document.createElement('select');channel.className='contactChannel';
-   for(const value of ['','WhatsApp','Viber','Telefon','Drugo']){
-     const o=document.createElement('option');o.value=value;o.textContent=value||'Kanal kontakta';channel.append(o);
-   }
-   channel.value=x.channel||'';
-   const memo=document.createElement('textarea');memo.placeholder='Komentar (opciono)';memo.value=plainComment(x);
-   const save=document.createElement('button');save.textContent='Sačuvaj status / komentar';
+   const commentLabel=document.createElement('label');
+   commentLabel.textContent='Interna napomena za kandidata';
+   const memo=document.createElement('textarea');memo.placeholder='Šta je kandidat rekao? (kratka napomena)';memo.value=plainComment(x);memo.maxLength=150;
+   const save=document.createElement('button');save.textContent='Sačuvaj komentar';
    const saveNotice=document.createElement('div');saveNotice.className='saveNotice note';
-   edit.append(choices,channel,memo,save,saveNotice);
+   edit.append(commentLabel,memo,save,saveNotice);
    save.addEventListener('click',()=>saveCardStatus(x,edit));
    details.append(summary,meta,edit);
-   box.append(head,info,buttons,foot,emailCheck,workLine,notice,details);
+   box.append(head,workflow,info,buttons,foot,emailCheck,workLine,notice,details);
    frag.append(box);
  }
  list.append(frag);
@@ -1060,20 +1087,11 @@ function learn() {
  }).withFailureHandler(e=>{output.textContent='Greška: '+String(e.message||e)}).addLearnedAnswer({question:q,keywords,answer});
 }
 function saveCardStatus(x,card) {
- const status=card.querySelector('select').value;
- const commentUser=card.querySelector('textarea').value.trim();
- const comment=stampedContactLog(x,null,'',commentUser);
- const channel=card.querySelector('.contactChannel').value;
- const notice=card.querySelector('.saveNotice');
- let confirmed=false;
- if(status==='POZVAN') {
-   confirmed=window.confirm('Da li je kandidat ZAISTA kontaktiran? Status nije potvrda iz WhatsApp/Viber sistema.');
-   if(!confirmed)return;
- }
- notice.textContent='Upisujem status…';
- google.script.run.withSuccessHandler(()=>{
-   notice.textContent='Evidencija je sačuvana. Osvežavam…';refresh();
- }).withFailureHandler(e=>{notice.textContent='Greška: '+String(e.message||e)}).saveCandidateStatus({id:x.id,status,comment,channel,confirmed});
+  const note=card.querySelector('textarea').value.trim();
+  const notice=card.querySelector('.saveNotice');
+  const next=crmState(x);
+  next.note=note;
+  saveCRM(x,next,notice,'Komentar sačuvan u evidenciji.');
 }
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
