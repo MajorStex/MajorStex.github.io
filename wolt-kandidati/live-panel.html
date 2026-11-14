@@ -429,7 +429,7 @@ function emailMessage(x){
   if(email)out.push('Kontaktiramo te na e-mail adresu '+email+' koju si naveo/la u prijavi.');
   out.push(
     '',
-    'Saradjujemo sa partnerskim agencijama i proveravamo odgovarajuću opciju prema tvom gradu i zahtevima.',
+    'Sarađujemo sa partnerskim agencijama i proveravamo odgovarajuću opciju prema tvom gradu i zahtevima.',
     '',
     'PRVI KORAK – POPUNI FORMULAR:',
     REGISTRATION_URL,
@@ -484,8 +484,8 @@ function copyTextToClipboard(text){
 function openCandidateWhatsApp(x,notice){
  const number=contactPhone(x.phone);
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
- const sent=existingSent(x);
- if(sent && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+sent.date+'. Da li želiš da otvoriš WhatsApp ponovo?'))return;
+ const when=getSendLog(x).WhatsApp;
+ if(when && !window.confirm('WhatsApp poruka već je ručno označena kao poslata '+when+'. Otvori ponovo?'))return;
  const message=registrationMessage(x);
  const link='https://wa.me/'+number+'?text='+encodeURIComponent(message);
  setNotice(notice,'Otvoren je WhatsApp sa pripremljenom porukom. Pritisni Send. Otvaranje ne znači da je poruka poslata.');
@@ -494,8 +494,8 @@ function openCandidateWhatsApp(x,notice){
 function openCandidateViber(x,notice){
  const number=contactPhone(x.phone);
  if(!canContact(x)||!number){setNotice(notice,'Kontaktiranje nije dozvoljeno ili broj nije ispravan.');return}
- const sent=existingSent(x);
- if(sent && !window.confirm('Za ovog kandidata već postoji potvrđeno slanje '+sent.date+'. Da li želiš da otvoriš Viber ponovo?'))return;
+ const when=getSendLog(x).Viber;
+ if(when && !window.confirm('Viber poruka već je ručno označena kao poslata '+when+'. Otvori ponovo?'))return;
  const message=registrationMessage(x);
  // Viber does not document guaranteed draft-in-recipient-chat behavior for ordinary personal numbers.
  // Copy the text first, then attempt opening the chat; the operator may have to paste and press Send.
