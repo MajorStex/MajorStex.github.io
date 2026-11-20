@@ -1,0 +1,184 @@
+{% comment %}
+GLOW & GO — Gel Blaster AK-47, Shopify OS 2.0 product section.
+Use only on the matching product template. Product, price and stock come from Shopify.
+Before publishing: upload verified product images to Shopify with the chosen image first;
+enable Releasit and test its COD form on the actual store; configure the 450 RSD
+delivery rule ONCE; add policies/contact and verify legal declarations/age.
+Do not use on GitHub Pages (it needs Shopify Liquid).
+{% endcomment %}
+{% if product != blank %}
+{% assign gg_variant = product.selected_or_first_available_variant %}
+<section class="ggp" id="ggp-{{ section.id }}">
+<style>
+#ggp-{{ section.id }}{--blue:#0875e8;--navy:#09213d;--soft:#f3f8ff;--line:#dce6ef;color:var(--navy);background:#fff;font:inherit;line-height:1.5}
+#ggp-{{ section.id }} *{box-sizing:border-box}
+#ggp-{{ section.id }} h1,#ggp-{{ section.id }} h2,#ggp-{{ section.id }} h3,#ggp-{{ section.id }} p{margin:0}
+#ggp-{{ section.id }} .ggp-inner{max-width:1160px;margin:0 auto;padding:24px 22px}
+#ggp-{{ section.id }} .ggp-hero{display:grid;grid-template-columns:1.07fr .93fr;gap:40px;align-items:start}
+#ggp-{{ section.id }} .ggp-main{position:relative;border:1px solid var(--line);border-radius:20px;aspect-ratio:1/1;background:radial-gradient(circle,#fff 10%,#f1f7fd 100%);overflow:hidden;display:grid;place-items:center}
+#ggp-{{ section.id }} .ggp-main img{width:100%;height:100%;object-fit:contain;padding:10px}
+#ggp-{{ section.id }} .ggp-nav{position:absolute;top:50%;transform:translateY(-50%);border:1px solid var(--line);border-radius:50%;width:42px;height:42px;background:#fffefeee;font-size:24px;color:var(--navy);cursor:pointer}
+#ggp-{{ section.id }} .ggp-prev{left:9px}#ggp-{{ section.id }} .ggp-next{right:9px}
+#ggp-{{ section.id }} .ggp-thumbs{display:flex;gap:10px;overflow-x:auto;margin-top:10px;padding:2px 1px 7px;scrollbar-width:thin}
+#ggp-{{ section.id }} .ggp-thumb{flex:0 0 82px;height:82px;border:2px solid transparent;border-radius:13px;background:#f6f9fc;padding:4px;cursor:pointer}
+#ggp-{{ section.id }} .ggp-thumb[aria-pressed="true"]{border-color:var(--blue)}
+#ggp-{{ section.id }} .ggp-thumb img{width:100%;height:100%;object-fit:contain}
+#ggp-{{ section.id }} .ggp-photos-note{font-size:11px;color:#657485;margin-top:7px}
+#ggp-{{ section.id }} .ggp-info{display:grid;gap:14px}
+#ggp-{{ section.id }} .ggp-kicker{color:#0870d4;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+#ggp-{{ section.id }} h1{font-size:clamp(30px,4vw,46px);letter-spacing:-.04em;line-height:1.09;font-weight:850}
+#ggp-{{ section.id }} .ggp-description{color:#647481;font-size:16px}
+#ggp-{{ section.id }} .ggp-prices{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#ggp-{{ section.id }} .ggp-price{font-size:34px;line-height:1.1;font-weight:850}
+#ggp-{{ section.id }} .ggp-compare{font-size:18px;text-decoration:line-through;color:#88949e}
+#ggp-{{ section.id }} .ggp-shipping{border-block:1px solid var(--line);padding:12px 0;font-size:14px;display:grid;gap:6px}
+#ggp-{{ section.id }} .ggp-shipping>div{display:flex;justify-content:space-between;gap:12px}
+#ggp-{{ section.id }} .ggp-benefits{display:flex;flex-wrap:wrap;gap:7px}
+#ggp-{{ section.id }} .ggp-benefits span{background:#edf6ff;color:#13507e;border-radius:25px;padding:5px 9px;font-size:12px;font-weight:700}
+#ggp-{{ section.id }} .ggp-buy{background:linear-gradient(105deg,#0877ec,#0763bd);color:white!important;display:flex;align-items:center;justify-content:center;min-height:58px;padding:13px;border-radius:12px;text-decoration:none!important;font-weight:850;font-size:17px;text-align:center}
+#ggp-{{ section.id }} .ggp-unavailable{background:#eef2f6;color:#5d6d7a;padding:13px;border-radius:12px;text-align:center;font-weight:750}
+#ggp-{{ section.id }} .ggp-buy-note{color:#586e80;font-size:12px;text-align:center;margin-top:8px}
+#ggp-{{ section.id }} .ggp-panel{padding:32px 0;border-top:1px solid var(--line)}
+#ggp-{{ section.id }} .ggp-panel h2{font-size:clamp(22px,3vw,30px);line-height:1.2;margin-bottom:15px}
+#ggp-{{ section.id }} .ggp-features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#ggp-{{ section.id }} .ggp-feature{border:1px solid #e0ebf5;background:var(--soft);border-radius:15px;padding:18px}
+#ggp-{{ section.id }} .ggp-feature strong{display:block;margin-bottom:5px}
+#ggp-{{ section.id }} .ggp-feature p{font-size:14px;color:#5b6f82}
+#ggp-{{ section.id }} .ggp-spec{display:grid;grid-template-columns:1fr 1.5fr;gap:12px;border-bottom:1px solid var(--line);padding:12px;font-size:14px}
+#ggp-{{ section.id }} .ggp-spec:nth-child(even){background:#f8fbfe}
+#ggp-{{ section.id }} .ggp-spec>span{color:#617384}
+#ggp-{{ section.id }} .ggp-package{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:0;list-style:none}
+#ggp-{{ section.id }} .ggp-package li{border:1px solid var(--line);border-radius:11px;padding:11px;font-size:14px}
+#ggp-{{ section.id }} .ggp-package li:before{content:"✓";margin-right:8px;color:var(--blue)}
+#ggp-{{ section.id }} .ggp-safety{border:1px solid #f0d9ba;background:#fff7e9;border-radius:14px;padding:19px}
+#ggp-{{ section.id }} .ggp-safety ul{padding-left:19px;margin:9px 0 0;font-size:14px}
+#ggp-{{ section.id }} .ggp-faq details{border-bottom:1px solid var(--line);padding:15px 0}
+#ggp-{{ section.id }} .ggp-faq summary{cursor:pointer;font-weight:760}
+#ggp-{{ section.id }} .ggp-faq p{color:#647484;font-size:14px;margin-top:10px}
+#ggp-{{ section.id }} .ggp-legal{border-top:1px solid var(--line);padding:20px 0}
+#ggp-{{ section.id }} .ggp-legal p{font-size:13px;color:#607080}
+#ggp-{{ section.id }} .ggp-links{display:flex;gap:10px 16px;flex-wrap:wrap;margin-top:10px}
+#ggp-{{ section.id }} .ggp-links a{color:#0871d2;text-decoration:underline;font-size:13px;font-weight:700}
+#ggp-{{ section.id }} .ggp-mobile{display:none}
+@media(max-width:750px){
+ #ggp-{{ section.id }} .ggp-inner{padding:14px 15px 96px}
+ #ggp-{{ section.id }} .ggp-hero{grid-template-columns:1fr;gap:18px}
+ #ggp-{{ section.id }} .ggp-features{grid-template-columns:1fr}
+ #ggp-{{ section.id }} .ggp-package{grid-template-columns:1fr}
+ #ggp-{{ section.id }} .ggp-panel{padding:25px 0}
+ #ggp-{{ section.id }} .ggp-mobile{display:flex;position:fixed;z-index:35;left:0;right:0;bottom:0;padding:9px 13px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fffffff5;align-items:center;gap:12px;box-shadow:0 -8px 26px #09213d18}
+ #ggp-{{ section.id }} .ggp-mobile .ggp-buy{min-height:46px;flex:1;font-size:14px}
+ #ggp-{{ section.id }} .ggp-mobile strong{white-space:nowrap;font-size:14px}
+ #ggp-{{ section.id }} .ggp-mobile[hidden]{display:none}
+}
+</style>
+<div class="ggp-inner">
+<div class="ggp-hero">
+<div class="ggp-gallery">
+{% if product.images.size > 0 %}
+{% assign gg_image = product.featured_image | default: product.images.first %}
+<div class="ggp-main">
+<img class="ggp-main-img" src="{{ gg_image | image_url: width: 1200 }}" width="{{ gg_image.width }}" height="{{ gg_image.height }}" alt="{{ gg_image.alt | default: product.title | escape }}" loading="eager">
+{% if product.images.size > 1 %}<button type="button" class="ggp-nav ggp-prev" aria-label="Prethodna fotografija">‹</button><button type="button" class="ggp-nav ggp-next" aria-label="Sledeća fotografija">›</button>{% endif %}
+</div>
+<div class="ggp-thumbs">
+{% for photo in product.images limit: 12 %}
+<button type="button" class="ggp-thumb" data-full="{{ photo | image_url: width: 1200 }}" aria-label="Fotografija {{ forloop.index }}" aria-pressed="{% if photo.id == gg_image.id %}true{% else %}false{% endif %}">
+<img src="{{ photo | image_url: width: 150 }}" alt="{{ photo.alt | default: product.title | escape }}" width="80" height="80" loading="lazy">
+</button>
+{% endfor %}
+</div>
+{% else %}
+<div class="ggp-main"><p>Dodajte originalne fotografije proizvoda u Shopify Media.</p></div>
+{% endif %}
+</div>
+<div class="ggp-info">
+<p class="ggp-kicker">Glow &amp; Go / Gel Blaster</p>
+<h1>{{ product.title | escape }}</h1>
+<p class="ggp-description">Gel blaster u plavo-belom dezenu sa punjivom baterijom i pojedinačnim i automatskim načinom rada.</p>
+<div class="ggp-prices"><strong class="ggp-price">{{ gg_variant.price | money }}</strong>
+{% if gg_variant.compare_at_price > gg_variant.price %}<span class="ggp-compare">{{ gg_variant.compare_at_price | money }}</span>{% endif %}
+</div>
+<div class="ggp-shipping">
+<div><span>Planirana dostava</span><strong>450 RSD</strong></div>
+<div><span>Plaćanje</span><strong>Pouzećem</strong></div>
+</div>
+<p class="ggp-photos-note">Konačna ukupna cena i dostava prikazuju se pre potvrde COD porudžbine. Cena i zalihe ovog proizvoda čitaju se iz Shopify-a.</p>
+<div class="ggp-benefits"><span>✓ Punjiva baterija</span><span>✓ Dva režima</span><span>✓ Plaćanje pri preuzimanju</span></div>
+<div class="ggp-main-buy">
+{% if gg_variant.available %}
+<a class="ggp-buy _rsi-cod-form-gempages-button-overwrite _rsi-cod-form-is-gempage" href="/rsi-btn-hook">KUPI ODMAH →</a>
+<p class="ggp-buy-note">COD formular otvara Releasit kada je aktiviran i pravilno povezan.</p>
+{% else %}
+<div class="ggp-unavailable">Trenutno nije na stanju</div>
+{% endif %}
+</div>
+</div>
+</div>
+<div class="ggp-panel"><h2>Zašto ovaj model?</h2>
+<div class="ggp-features"><article class="ggp-feature"><strong>Punjiva baterija</strong><p>Napajanje baterijom prema uputstvu proizvođača.</p></article>
+<article class="ggp-feature"><strong>Dva režima rada</strong><p>Pojedinačno i automatski.</p></article>
+<article class="ggp-feature"><strong>Plavo-beli izgled</strong><p>Grafiti dezen i providni rezervoar.</p></article></div>
+</div>
+<div class="ggp-panel"><h2>Specifikacije</h2>
+<div class="ggp-spec"><span>Model</span><strong>Gel Blaster AK-47</strong></div>
+<div class="ggp-spec"><span>Napajanje</span><strong>Punjiva baterija</strong></div>
+<div class="ggp-spec"><span>Način rada</span><strong>Pojedinačni / automatski</strong></div>
+<div class="ggp-spec"><span>Uzrast</span><strong>Prema deklaraciji proizvođača</strong></div>
+<p class="ggp-photos-note">Domet, dimenzije i druge tehničke karakteristike treba potvrditi na deklaraciji pre oglašavanja.</p>
+</div>
+<div class="ggp-panel"><h2>Sadržaj pakovanja</h2>
+<ul class="ggp-package"><li>Gel Blaster AK-47</li><li>Providni rezervoar</li><li>Gel kuglice</li><li>Punjiva baterija</li><li>Plastični produžetak cevi</li><li>Uputstvo</li></ul>
+<p class="ggp-photos-note">Potvrdite sadržaj konkretnog pakovanja pre puštanja proizvoda u prodaju.</p>
+</div>
+<div class="ggp-panel"><div class="ggp-safety"><h2>Bezbedna upotreba</h2><p>Pridržavajte se uputstva i oznaka sa deklaracije. Gel kuglice nisu hrana.</p>
+<ul><li>Koristite odgovarajuću zaštitu očiju.</li><li>Ne ciljajte u lice, prema ljudima ili životinjama.</li><li>Ne koristite na javnim mestima.</li><li>Držite van domašaja male dece i kućnih ljubimaca.</li></ul></div>
+</div>
+<div class="ggp-panel ggp-faq"><h2>Često postavljana pitanja</h2>
+<details><summary>Kako se napaja?</summary><p>Punjivom baterijom prema priloženom uputstvu.</p></details>
+<details><summary>Da li mogu da platim pri preuzimanju?</summary><p>Da, poručivanje je predviđeno preko Releasit COD formulara.</p></details>
+<details><summary>Koliko traje isporuka?</summary><p>Predviđeno je 1–3 radna dana, uz moguća odstupanja zavisno od mesta dostave.</p></details>
+<details><summary>Koji je preporučeni uzrast?</summary><p>Proverite zvaničnu deklaraciju proizvođača pre upotrebe.</p></details>
+<details><summary>Kako se ostvaruje povrat?</summary><p>Na kupovinu na daljinu se po pravilu primenjuje pravo na odustanak u roku od 14 dana od prijema, uz zakonske uslove i izuzetke. Proverite pravila prodavnice.</p></details>
+</div>
+<div class="ggp-legal">
+<p>Pre kupovine pogledajte pravila prodavnice, uslove dostave i informacije o trgovcu.</p>
+<nav class="ggp-links" aria-label="Pravila prodavnice">
+<a href="{{ shop.refund_policy.url | default: '/policies/refund-policy' }}">Povrat i reklamacije</a>
+<a href="{{ shop.shipping_policy.url | default: '/policies/shipping-policy' }}">Dostava</a>
+<a href="{{ shop.privacy_policy.url | default: '/policies/privacy-policy' }}">Privatnost</a>
+<a href="{{ shop.terms_of_service.url | default: '/policies/terms-of-service' }}">Uslovi prodaje</a>
+<a href="/pages/contact">Kontakt</a>
+</nav>
+</div>
+</div>
+{% if gg_variant.available %}
+<div class="ggp-mobile"><strong>{{ gg_variant.price | money }}</strong>
+<a class="ggp-buy _rsi-cod-form-gempages-button-overwrite _rsi-cod-form-is-gempage" href="/rsi-btn-hook">KUPI ODMAH →</a></div>
+{% endif %}
+<script>
+(function(){
+var root=document.getElementById('ggp-{{ section.id }}');if(!root)return;
+var main=root.querySelector('.ggp-main-img'),thumbs=[].slice.call(root.querySelectorAll('.ggp-thumb')),current=0;
+function show(i){if(!main||!thumbs.length)return;current=(i+thumbs.length)%thumbs.length;
+main.src=thumbs[current].getAttribute('data-full');thumbs.forEach(function(b,j){b.setAttribute('aria-pressed',String(j===current))})}
+thumbs.forEach(function(b,i){b.addEventListener('click',function(){show(i)})});
+var prev=root.querySelector('.ggp-prev'),next=root.querySelector('.ggp-next');
+if(prev)prev.addEventListener('click',function(){show(current-1)});
+if(next)next.addEventListener('click',function(){show(current+1)});
+var started=0,area=root.querySelector('.ggp-main');if(area){area.addEventListener('touchstart',function(e){started=e.changedTouches[0].clientX},{passive:true});area.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-started;if(Math.abs(dx)>45)show(current+(dx<0?1:-1))},{passive:true})}
+var bar=root.querySelector('.ggp-mobile'),buy=root.querySelector('.ggp-main-buy');
+if(bar&&buy&&'IntersectionObserver' in window){new IntersectionObserver(function(entries){bar.hidden=entries[0].isIntersecting},{threshold:.25}).observe(buy)}
+})();
+</script>
+</section>
+{% endif %}
+{% schema %}
+{
+  "name": "Glow & Go Gel Blaster",
+  "tag": "section",
+  "class": "glow-go-product-section",
+  "settings": [],
+  "presets": [{"name":"Glow & Go Gel Blaster"}]
+}
+{% endschema %}
