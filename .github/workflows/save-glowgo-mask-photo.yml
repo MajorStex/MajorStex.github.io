@@ -1,0 +1,30 @@
+name: Save Glow and Go product photo
+on:
+  push:
+    paths:
+      - '.github/workflows/save-glowgo-mask-photo.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  save-photo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download product image to permanent site assets
+        env:
+          SOURCE_URL: 'https://d2jqrm6oza8nb6.cloudfront.net/datasets/49b4893c-b0ae-4d17-bb2f-0bc5c30aa2b7.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiYzQ0YjkwNGZkYTAzZWEzZSIsImJ1Y2tldCI6InJ1bndheS1kYXRhc2V0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc5NTI4MzI3OX0.aWSR9-WUmHgzM2ovXqEz61kb_TiEZDln4kP74mbfJ3c'
+        run: |
+          mkdir -p glowgo-hyaluronic-mask/images
+          curl --fail --location --retry 3 --show-error --silent "$SOURCE_URL" -o glowgo-hyaluronic-mask/images/omayln-hyaluronic-mask.png
+          test -s glowgo-hyaluronic-mask/images/omayln-hyaluronic-mask.png
+          file glowgo-hyaluronic-mask/images/omayln-hyaluronic-mask.png
+      - name: Commit permanent site image
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add glowgo-hyaluronic-mask/images/omayln-hyaluronic-mask.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Store correct hyaluronic mask product photo on GitHub Pages"
+            git push
+          fi
